@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>王老师中文课堂</title>
+<script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
+<!-- 这里引入我们统一的数据源，让学生手机也能自己读题 -->
+<script src="data_hsk4_11.js"></script>
+<style>
+/* ================= 苹果原生级纯净极简风 (琉璃紫版) ================= */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; -webkit-tap-highlight-color: transparent; }
+body { background: #F4F6F8; min-height: 100vh; color: #1E293B; }
+.hdr { background: #7C3AED; color: #ffffff; padding: 20px 20px 16px; text-align: center; position: sticky; top: 0; z-index: 20; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 20px rgba(124,58,237,0.15); }
+.hdr h1 { font-size: 20px; font-weight: 700; margin: 0; }
+.hdr .sub { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.dot.on { background: #10B981; box-shadow: 0 0 6px rgba(16,185,129,0.8); } .dot.off { background: #FCA5A5; }
+.tabs { display: flex; padding: 12px 16px; gap: 6px; position: sticky; top: 68px; z-index: 10; background: rgba(244,246,248,0.85); backdrop-filter: blur(12px); }
+.tab { flex: 1; padding: 10px 4px; font-size: 14px; font-weight: 600; border: none; background: transparent; border-radius: 10px; cursor: pointer; color: #64748B; transition: all 0.2s ease; }
+.tab.on { background: #ffffff; color: #7C3AED; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.sec { padding: 0 16px 20px 16px; }
+.card { background: #ffffff; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.03); }
+.inp { width: 100%; padding: 16px; font-size: 15px; border: 1px solid #E2E8F0; border-radius: 12px; background: #F8FAFC; transition: all 0.2s ease; resize: none; color: #0F172A; }
+.inp:focus { outline: none; border-color: #7C3AED; background: #fff; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+.btn { width: 100%; padding: 16px; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; margin-top: 12px; color: #fff; background: #7C3AED; box-shadow: 0 4px 12px rgba(124,58,237,0.25); transition: all 0.2s; }
+.btn:active { transform: scale(0.98); background: #6D28D9; } .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.toast { position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 100; padding: 14px 28px; border-radius: 30px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: tin 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.toast.sent { background: #ffffff; color: #7C3AED; }
+@keyframes tin { from { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.9); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+.rec { padding: 14px 18px; margin-bottom: 12px; background: #F8FAFC; border-radius: 0 16px 16px 16px; border-left: 3px solid #7C3AED; font-size: 15px; }
+.empty { text-align: center; color: #94A3B8; padding: 40px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="hdr">
+    <h1>🌱 王老师中文课堂</h1>
+    <div class="sub"><span class="dot" id="dot"></span><span id="stxt">连接中...</span></div>
+</div>
+
+<div class="tabs">
+    <button class="tab on" onclick="stab('a')" id="ta">🙋‍♂️ 互动区</button>
+    <button class="tab" onclick="stab('b')" id="tb">📊 报告</button>
+</div>
+
+<div id="pa">
+    <div class="sec">
+        <div id="ns" class="card">
+            <label style="font-size:15px;font-weight:600;display:block;margin-bottom:12px;">👤 请输入你的真实姓名：</label>
+            <input type="text" class="inp" id="nm" placeholder="例如：FATEEV" onblur="onN()">
+        </div>
+        <div id="nk" class="card" style="display:none; background:#F8FAFC;">
+            <span style="font-weight:600;font-size:15px;">当前身份：<span id="nd" style="color:#7C3AED;"></span></span> 
+            <button onclick="chN()" style="background:none;border:none;font-size:13px;cursor:pointer;color:#7C3AED;margin-left:12px;">切换</button>
+        </div>
+    </div>
+    
+    <div class="sec">
+        <h3 style="font-size:14px;color:#64748B;margin-bottom:10px;font-weight:600;">✍️ 发送弹幕 / 回答</h3>
+        <textarea class="inp" id="ip" placeholder="听从老师指挥，在这里输入答案..."></textarea>
+        <button class="btn" id="sb" onclick="send()" disabled>🚀 提交发送</button>
+    </div>
+
+    <!-- 动态任务弹窗区 -->
+    <div id="taskArea" style="display:none;" class="sec">
+        <div class="card" style="border:2px solid #7C3AED; text-align:center;">
+            <div style="font-size:40px; margin-bottom:10px;">🎯</div>
+            <h3 id="taskTitle" style="font-size:18px; color:#7C3AED; margin-bottom:10px;">老师发起了新任务</h3>
+            <p id="taskDesc" style="font-size:14px; color:#64748B; margin-bottom:16px;">请注意看大屏幕或听老师口令作答！</p>
+            <button onclick="document.getElementById('taskArea').style.display='none'" class="btn" style="background:#F1F5F9; color:#64748B; box-shadow:none;">我知道了</button>
+        </div>
+    </div>
+    
+    <div class="sec">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">📝 我的互动记录</h3>
+        <div id="rl"><div class="empty">上课专心听讲，随时准备答题哦！</div></div>
+    </div>
+</div>
+
+<div id="pb" style="display:none"><div class="sec">
+    <div class="card" style="text-align:center;padding:60px 20px;">
+        <div style="font-size:40px;margin-bottom:16px">🏆</div>
+        <div style="font-weight:600;font-size:16px;">你的课堂积分正在累计中</div>
+        <div style="font-size:13px;color:#94A3B8;margin-top:8px">课后可查看详细报告</div>
+    </div>
+</div></div>
+
+<div id="tc2"></div>
+
+<script>
+const MQ = 'wss://7eee84f75e7c4468b6fbc2e450750701.s1.eu.hivemq.cloud:8884/mqtt'; 
+const MU = 'Wanghsk'; const MP = '2010wanghsk'; const RM = 'Wang_HSK_2024';
+
+const PRES=`wanghsk/room/${RM}/presence`;
+const ANS=`wanghsk/room/${RM}/answers`;
+const CMD=`wanghsk/room/${RM}/commands`; // ✅ 新增：专门接收老师下发的极简指令
+
+let N=localStorage.getItem('wanghsk_name')||'', cl=null, rec=[];
+
+window.onload=()=>{
+    if(N){document.getElementById('nm').value=N;onN()}
+    connectMQ();
+};
+
+function stab(t){
+    document.getElementById('pa').style.display=t==='a'?'block':'none';
+    document.getElementById('pb').style.display=t==='b'?'block':'none';
+    document.getElementById('ta').className='tab'+(t==='a'?' on':'');
+    document.getElementById('tb').className='tab'+(t==='b'?' on':'');
+}
+
+function onN(){
+    const s=document.getElementById('nm'); N=s.value.trim();
+    if(N){
+        localStorage.setItem('wanghsk_name',N);
+        document.getElementById('sb').disabled=false;
+        document.getElementById('ns').style.display='none';
+        document.getElementById('nk').style.display='block';
+        document.getElementById('nd').textContent=N;
+        if(cl&&cl.connected) cl.publish(PRES,JSON.stringify({name:N, action:'join'}),{qos:1});
+    }
+}
+function chN(){ document.getElementById('nm').value=''; document.getElementById('nk').style.display='none'; document.getElementById('ns').style.display='block'; document.getElementById('sb').disabled=true; N=''; localStorage.removeItem('wanghsk_name'); }
+
+function connectMQ(){
+    cl=mqtt.connect(MQ, {clientId:'s_'+Math.random().toString(16).substr(2,8), username:MU, password:MP});
+    cl.on('connect',()=>{
+        document.getElementById('dot').className='dot on'; document.getElementById('stxt').textContent='已进入教室';
+        cl.subscribe(CMD,{qos:1}); // 监听老师指令
+        if(N) cl.publish(PRES,JSON.stringify({name:N, action:'join'}),{qos:1});
+    });
+    cl.on('message',(t,m)=>{
+        try{
+            const d=JSON.parse(m.toString());
+            // ✅ 接收到老师的抽象指令，弹出提醒
+            if(t===CMD) {
+                if(d.action === 'DISPATCH_TASK' || d.action === 'OPEN_JEOPARDY') {
+                    document.getElementById('taskArea').style.display = 'block';
+                    if(d.action === 'OPEN_JEOPARDY') {
+                        document.getElementById('taskTitle').textContent = '⚡ 诸神之战抢答开始！';
+                        document.getElementById('taskDesc').textContent = '请看大屏幕题目，在这里迅速输入答案并发送！';
+                    } else {
+                        document.getElementById('taskTitle').textContent = '📋 老师发布了新任务';
+                        document.getElementById('taskDesc').textContent = '任务已同步在大屏幕，请看屏幕或听口令操作！';
+                    }
+                    window.navigator.vibrate && window.navigator.vibrate(200); // 手机震动提醒
+                }
+            }
+        }catch(e){}
+    });
+}
+
+function send(){
+    const i=document.getElementById('ip'), tx=i.value.trim();
+    if(!N){alert('请先输入姓名');return} if(!tx||!cl)return;
+    const tm=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+    cl.publish(ANS,JSON.stringify({name:N, text:tx, time:tm}),{qos:1}); // 发送给老师
+    i.value=''; rec.unshift({text:tx, time:tm}); drawRec(); toast('✅ 发送成功','sent');
+}
+
+function drawRec(){
+    const l=document.getElementById('rl');
+    if(!rec.length){l.innerHTML='<div class="empty">暂无记录</div>';return}
+    l.innerHTML=rec.map(r=>'<div class="rec"><div style="font-size:12px;color:#64748B;">'+r.time+'</div><div style="font-size:15px;margin-top:4px;">'+r.text+'</div></div>').join('');
+}
+
+function toast(m,t){
+    const c=document.getElementById('tc2'), e=document.createElement('div');
+    e.className='toast '+t; e.textContent=m; c.appendChild(e);
+    setTimeout(()=>{e.style.opacity='0'; setTimeout(()=>e.remove(),300)},2000);
+}
+</script>
+</body>
+</html>

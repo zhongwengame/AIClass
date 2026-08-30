@@ -7,10 +7,9 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<!-- 引入二维码生成库 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<!-- 核心：使用 WSS 加密协议解决通讯拦截 -->
-<script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
+<!-- 稳定公共加密通道 -->
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script src="data_hsk4_11.js"></script>
 
 <style>
@@ -29,7 +28,6 @@
   .match-card.matched { background: #f0fdf4; border-color: #22c55e; color: #16a34a; opacity: 0.2; pointer-events: none;}
   .match-card.wrong { background: #fef2f2; border-color: #ef4444; color: #dc2626; animation: shake 0.4s; }
   @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
-
   .hanzi-buffer { min-height: 60px; border: 2px dashed #94a3b8; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 1.5rem; font-weight: bold; color: #4f46e5; background: #f8fafc;}
   .cloud-container { position: relative; height: 350px; overflow: hidden; background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 16px; display: flex; align-items: center; justify-content: center;}
   .cloud-word { position: absolute; white-space: nowrap; transition: all 0.5s ease-out; text-shadow: 0px 4px 10px rgba(0,0,0,0.8); cursor: default; transform: translate(-50%, -50%);}
@@ -38,6 +36,7 @@
 <body class="flex flex-col">
 <div id="app" class="flex flex-col min-h-screen">
 
+  <!-- 顶部状态栏 -->
   <header class="sticky top-0 z-50 bg-[#0f172a] text-white px-6 py-4 flex justify-between items-center shadow-md">
     <div class="flex items-center gap-4">
       <button @click="isLeftOpen = !isLeftOpen" class="text-amber-400 text-2xl hover:text-amber-300 transition"><i class="fa-solid fa-bars"></i></button>
@@ -55,7 +54,7 @@
   </header>
 
   <div class="flex flex-1 items-stretch">
-    <!-- 左侧菜单 -->
+    <!-- 左侧菜单 (5大板块) -->
     <aside :class="isLeftOpen ? 'w-56' : 'w-16'" class="bg-[#f8fafc] border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300 sticky top-[68px]" style="height: calc(100vh - 68px);">
       <nav class="flex-1 px-3 py-4 overflow-y-auto space-y-2">
         <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id" class="nav-btn w-full px-3 py-3 text-left" :class="{ 'active': currentTab === tab.id }">
@@ -69,8 +68,8 @@
       <div v-if="!d" class="text-red-500 font-bold text-xl text-center mt-20">🚨 错误：未能加载数据文件！</div>
       <template v-else>
         
-        <!-- 【学】 -->
-        <div v-if="currentTab === 'learn'" class="flex flex-col gap-4">
+        <!-- 【学】 (Learn) -->
+        <div v-if="currentTab === 'learn'" class="flex flex-col gap-4 animate-fade">
           <div class="bg-white p-4 rounded-xl card-shadow flex justify-between items-center">
             <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-desktop mr-2 text-indigo-500"></i>数字课件演示</h2>
             <a :href="d.learn.slidesUrl" target="_blank" class="text-indigo-600 font-bold text-sm">全屏打开 <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
@@ -80,8 +79,9 @@
           </div>
         </div>
 
-        <!-- 【练】 -->
-        <div v-if="currentTab === 'practice'" class="flex flex-col gap-6">
+        <!-- 【练】 (Practice) (6种题型) -->
+        <div v-if="currentTab === 'practice'" class="flex flex-col gap-6 animate-fade">
+          <!-- 题型导航栏 -->
           <div class="bg-white p-2 rounded-xl card-shadow flex gap-2 overflow-x-auto shrink-0">
              <button v-for="tab in practiceTabs" :key="tab.id" @click="changePractice(tab.id)"
                      class="px-5 py-2.5 rounded-lg text-sm font-bold transition whitespace-nowrap" 
@@ -93,59 +93,15 @@
           <div class="bg-white rounded-xl card-shadow p-6 lg:p-8 flex flex-col min-h-[500px]">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4 gap-4 shrink-0">
               <h3 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-chalkboard-user mr-2 text-indigo-500"></i>大屏互动：{{ getPracticeName(currentPractice) }}</h3>
-              <button @click="dispatchByMQTT" class="bg-[#4f46e5] hover:bg-[#4338ca] text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg transition flex items-center">
-                <i class="fa-solid fa-paper-plane mr-2"></i> 推送当前题至学生手机
+              <!-- 仅单选题显示推送到手机按钮 -->
+              <button v-if="currentPractice === 'vocab_drill'" @click="dispatchByMQTT" class="bg-[#4f46e5] hover:bg-[#4338ca] text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg transition flex items-center">
+                <i class="fa-solid fa-paper-plane mr-2"></i> 推送当前题至手机
               </button>
             </div>
 
-            <!-- 1. 汉字顺序拼写 -->
-            <div v-if="currentPractice === 'hanzi_match'" class="flex flex-col gap-6">
-              <div class="flex justify-between items-center">
-                <span class="text-slate-500 font-bold text-sm">请按正确顺序点击单字，拼出词汇</span>
-                <button @click="nextGamePage" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded text-sm font-bold text-slate-700">换下一批 <i class="fa-solid fa-arrow-right"></i></button>
-              </div>
-              <div class="hanzi-buffer" :class="{'bg-rose-50 border-rose-400 text-rose-600': hanziWrong}">
-                <span v-if="hanziBuffer.length === 0" class="text-slate-300 text-sm font-normal">点击下方单字进入拼写区...</span>
-                <span v-for="c in hanziBuffer" :key="c.uid" class="px-2">{{ c.text }}</span>
-              </div>
-              <div class="grid grid-cols-4 md:grid-cols-6 gap-4">
-                <div v-for="card in currentCards" :key="card.uid" @click="handleHanziClick(card)" 
-                     class="match-card text-2xl font-black" :class="{'matched': card.matched, 'opacity-50 pointer-events-none': hanziBuffer.includes(card)}">
-                  {{ card.text }}
-                </div>
-              </div>
-            </div>
-
-            <!-- 2. 拼音/中俄配对 -->
-            <div v-else-if="['pinyin_match', 'lang_match'].includes(currentPractice)" class="flex flex-col gap-4">
-              <div class="flex justify-end"><button @click="nextGamePage" class="bg-slate-200 px-4 py-2 rounded text-sm font-bold">换一批</button></div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div v-for="card in currentCards" :key="card.uid" @click="handleCardClick(card)" 
-                     class="match-card" :class="{'selected': selectedCard?.uid === card.uid, 'matched': card.matched, 'wrong': card.wrong}">
-                  {{ card.text }}
-                </div>
-              </div>
-            </div>
-
-            <!-- 3. 词语搭配 (修复：完全打乱不对应) -->
-            <div v-else-if="currentPractice === 'colloc'">
-              <div class="flex justify-between mb-6">
-                <span class="text-sm font-bold text-slate-400">大屏连线题（已打乱顺序）</span>
-                <button @click="nextCollocPage" class="bg-slate-200 px-4 py-2 rounded text-sm font-bold">换下一批</button>
-              </div>
-              <div class="grid grid-cols-2 gap-x-16 gap-y-4 max-w-4xl mx-auto">
-                <div class="space-y-4">
-                  <div v-for="l in currentCollocLeft" :key="l.uid" @click="handleCollocClick(l, 'left')" class="p-3 rounded-lg text-center font-bold text-base cursor-pointer border-2 transition" :class="l.matched ? 'bg-slate-100 border-slate-200 text-slate-400 opacity-50' : (collocSelected?.uid === l.uid ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 'bg-white border-slate-300')">{{ l.text }}</div>
-                </div>
-                <div class="space-y-4">
-                  <div v-for="r in currentCollocRight" :key="r.uid" @click="handleCollocClick(r, 'right')" class="p-3 rounded-lg text-center font-bold text-base cursor-pointer border-2 transition" :class="r.matched ? 'bg-slate-100 border-slate-200 text-slate-400 opacity-50' : (collocSelected?.uid === r.uid ? 'bg-amber-100 border-amber-500 text-amber-700' : 'bg-white border-slate-300')">{{ r.text }}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 4. 词汇操练 (30题，可发送) -->
-            <div v-else-if="currentPractice === 'vocab_drill'" class="space-y-4">
-              <p class="text-sm font-bold text-rose-500 bg-rose-50 p-2 rounded">👇 点击某道题，然后点击上方“推送至学生端”，学生手机就会收到该题。</p>
+            <!-- 1. 单项选择题 (Vocab Drill) -->
+            <div v-if="currentPractice === 'vocab_drill'" class="space-y-4">
+              <p class="text-sm font-bold text-rose-500 bg-rose-50 p-2 rounded">👇 点击选中某道题，然后点击上方“推送至手机”，学生即可在手机作答。</p>
               <div v-for="(item, i) in drillList" :key="i" @click="currentDrillIndex = i" 
                    class="p-5 rounded-xl border-2 shadow-sm cursor-pointer transition"
                    :class="currentDrillIndex === i ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-slate-200'">
@@ -160,7 +116,55 @@
               </div>
             </div>
 
-            <!-- 5. 跟读练习 -->
+            <!-- 2. 词语搭配连线 (Collocation) -->
+            <div v-else-if="currentPractice === 'colloc'">
+              <div class="flex justify-between mb-6">
+                <span class="text-sm font-bold text-slate-400">大屏连线题（已彻底打乱顺序，点击A列和B列连线）</span>
+                <button @click="nextCollocPage" class="bg-slate-200 px-4 py-2 rounded text-sm font-bold">换下一批</button>
+              </div>
+              <div class="grid grid-cols-2 gap-x-16 gap-y-4 max-w-4xl mx-auto">
+                <div class="space-y-4">
+                  <div v-for="l in currentCollocLeft" :key="l.uid" @click="handleCollocClick(l, 'left')" class="p-3 rounded-lg text-center font-bold text-base cursor-pointer border-2 transition" :class="l.matched ? 'bg-slate-100 border-slate-200 text-slate-400 opacity-50' : (collocSelected?.uid === l.uid ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 'bg-white border-slate-300')">{{ l.text }}</div>
+                </div>
+                <div class="space-y-4">
+                  <div v-for="r in currentCollocRight" :key="r.uid" @click="handleCollocClick(r, 'right')" class="p-3 rounded-lg text-center font-bold text-base cursor-pointer border-2 transition" :class="r.matched ? 'bg-slate-100 border-slate-200 text-slate-400 opacity-50' : (collocSelected?.uid === r.uid ? 'bg-amber-100 border-amber-500 text-amber-700' : 'bg-white border-slate-300')">{{ r.text }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3 & 4. 拼音配对 / 中俄配对消消乐 -->
+            <div v-else-if="['pinyin_match', 'lang_match'].includes(currentPractice)" class="flex flex-col gap-4">
+              <div class="flex justify-between items-center">
+                <span class="text-slate-500 font-bold text-sm">点击两张对应的卡片进行消消乐</span>
+                <button @click="nextGamePage" class="bg-slate-200 px-4 py-2 rounded text-sm font-bold">换一批</button>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div v-for="card in currentCards" :key="card.uid" @click="handleCardClick(card)" 
+                     class="match-card" :class="{'selected': selectedCard?.uid === card.uid, 'matched': card.matched, 'wrong': card.wrong}">
+                  {{ card.text }}
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. 汉字顺序拼写 -->
+            <div v-else-if="currentPractice === 'hanzi_match'" class="flex flex-col gap-6">
+              <div class="flex justify-between items-center">
+                <span class="text-slate-500 font-bold text-sm">请按正确顺序点击单字，拼出词汇</span>
+                <button @click="nextGamePage" class="bg-slate-200 hover:bg-slate-300 px-4 py-2 rounded text-sm font-bold">换下一批</button>
+              </div>
+              <div class="hanzi-buffer" :class="{'bg-rose-50 border-rose-400 text-rose-600': hanziWrong}">
+                <span v-if="hanziBuffer.length === 0" class="text-slate-300 text-sm font-normal">点击下方单字进入拼写区...</span>
+                <span v-for="c in hanziBuffer" :key="c.uid" class="px-2">{{ c.text }}</span>
+              </div>
+              <div class="grid grid-cols-4 md:grid-cols-6 gap-4">
+                <div v-for="card in currentCards" :key="card.uid" @click="handleHanziClick(card)" 
+                     class="match-card text-2xl font-black" :class="{'matched': card.matched, 'opacity-50 pointer-events-none': hanziBuffer.includes(card)}">
+                  {{ card.text }}
+                </div>
+              </div>
+            </div>
+
+            <!-- 6. HSKK 跟读练习 -->
             <div v-else-if="currentPractice === 'read_aloud'" class="space-y-4">
               <div v-for="(r, i) in d.practice.reading_aloud" :key="i" class="bg-white p-5 rounded-xl border-2 border-slate-200 text-base font-bold text-slate-700 flex justify-between items-center shadow-sm">
                 <span>{{ r.text }}</span> <button class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-600 hover:text-white transition"><i class="fa-solid fa-volume-high"></i></button>
@@ -170,19 +174,67 @@
           </div>
         </div>
 
-        <!-- 【测】 -->
-        <div v-if="currentTab === 'test'" class="flex justify-center mt-10">
-          <div class="bg-white p-12 rounded-3xl card-shadow text-center max-w-2xl w-full">
+        <!-- 【赛】 (Race) -->
+        <div v-if="currentTab === 'race'" class="h-full flex flex-col relative animate-fade">
+            <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm">
+                <div>
+                    <h2 class="text-xl font-black text-slate-800"><i class="fa-solid fa-trophy text-amber-500 mr-2"></i>诸神之战 (Jeopardy 抢答)</h2>
+                    <p class="text-sm text-slate-500 mt-1">点击九宫格分数翻题，再推送到学生手机端进行手速抢答！</p>
+                </div>
+                <button @click="resetRace" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold transition">重置题板</button>
+            </div>
+
+            <!-- 九宫格题板 -->
+            <div v-if="!activeRaceQ" class="grid grid-cols-3 gap-6 flex-1 max-w-5xl w-full mx-auto">
+                <div v-for="(cat, cIdx) in d.race.categories" :key="cIdx" class="flex flex-col gap-4">
+                    <div class="bg-gradient-to-b from-indigo-500 to-indigo-700 text-white text-center py-4 rounded-xl font-bold text-xl shadow-md border border-indigo-800">{{ cat }}</div>
+                    <div v-for="pts in [10, 20, 30]" :key="pts"
+                         @click="openRaceQ(cIdx, pts)"
+                         class="flex-1 bg-white border-4 border-indigo-100 rounded-xl flex items-center justify-center text-4xl font-black cursor-pointer transition-transform transform hover:scale-105 shadow-md hover:shadow-xl"
+                         :class="isRaceAnswered(cIdx, pts) ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-60 pointer-events-none' : 'text-indigo-600 hover:border-indigo-500'">
+                        {{ pts }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 答题大屏 -->
+            <div v-else class="flex-1 bg-white rounded-3xl shadow-2xl border-4 border-indigo-500 p-10 flex flex-col items-center justify-center text-center relative max-w-5xl w-full mx-auto animate-fade">
+                <button @click="closeRaceQ" class="absolute top-6 right-6 text-slate-400 hover:text-rose-500 text-4xl transition"><i class="fa-solid fa-times-circle"></i></button>
+                <div class="text-indigo-500 font-bold text-xl mb-4 bg-indigo-50 px-6 py-2 rounded-full tracking-widest">{{ d.race.categories[activeRaceQ.catIdx] }} - {{ activeRaceQ.pts }} 分</div>
+                <h1 class="text-5xl font-black text-slate-800 mb-12 leading-tight max-w-4xl">{{ activeRaceQ.q }}</h1>
+
+                <div v-if="raceRevealed" class="text-4xl font-bold text-emerald-600 bg-emerald-50 border-4 border-emerald-200 px-12 py-8 rounded-2xl animate-fade mb-10 shadow-inner">
+                    正确答案：{{ activeRaceQ.a }}
+                </div>
+
+                <div class="flex gap-6 mt-auto">
+                    <button v-if="!raceRevealed" @click="sendRaceToStudents" class="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-5 rounded-full text-2xl font-bold shadow-xl transition flex items-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> 推送至手机抢答
+                    </button>
+                    <button v-if="!raceRevealed" @click="raceRevealed = true" class="bg-amber-500 hover:bg-amber-600 text-white px-10 py-5 rounded-full text-2xl font-bold shadow-xl transition">
+                        揭晓大屏答案
+                    </button>
+                    <button v-else @click="closeRaceQ" class="bg-slate-800 hover:bg-slate-900 text-white px-10 py-5 rounded-full text-2xl font-bold shadow-xl transition">
+                        结束本题，返回题板
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 🚨【测】 (Test) 完整找回！ ================= -->
+        <div v-if="currentTab === 'test'" class="flex justify-center mt-20 animate-fade">
+          <div class="bg-white p-12 rounded-3xl card-shadow text-center max-w-2xl w-full border-t-8 border-emerald-400">
             <i class="fa-solid fa-laptop-file text-7xl text-emerald-400 mb-6"></i>
-            <h2 class="text-2xl font-bold text-slate-800 mb-4">HSK 全真测试系统</h2>
-            <button @click="openTest" class="bg-[#10b981] text-white px-8 py-3 rounded-full font-bold text-lg shadow-xl hover:-translate-y-1 transition">
-              启动测试大厅 (新窗口)
+            <h2 class="text-3xl font-black text-slate-800 mb-4">HSK 全真测试系统</h2>
+            <p class="text-slate-500 mb-8 font-bold">防切屏 · 防复制 · 倒计时强制收卷</p>
+            <button @click="openTest" class="bg-[#10b981] text-white px-10 py-4 rounded-full font-bold text-xl shadow-xl hover:-translate-y-1 hover:shadow-2xl transition">
+              <i class="fa-solid fa-rocket mr-2"></i> 启动测试大厅 (新窗口)
             </button>
           </div>
         </div>
 
-        <!-- 【趣】 -->
-        <div v-if="currentTab === 'fun'" class="flex flex-col gap-6">
+        <!-- 【趣】 (Fun) -->
+        <div v-if="currentTab === 'fun'" class="flex flex-col gap-6 animate-fade">
           <div class="grid grid-cols-2 md:grid-cols-3 gap-6 shrink-0">
             <div @click="activeFunGame = 'guess'; startGuessGame()" class="bg-gradient-to-br from-[#f97316] to-[#f59e0b] rounded-2xl p-6 text-white cursor-pointer shadow-lg hover:-translate-y-1 text-center">
               <h3 class="text-xl font-bold mb-2"><i class="fa-solid fa-user-secret"></i> 我说你猜</h3>
@@ -196,9 +248,8 @@
           </div>
           
           <div class="bg-white rounded-2xl card-shadow flex-1 min-h-[400px] p-6 relative">
-            <div v-if="!activeFunGame" class="h-full flex items-center justify-center text-slate-400 font-bold text-lg">请选择上方卡片开始</div>
+            <div v-if="!activeFunGame" class="h-full flex items-center justify-center text-slate-400 font-bold text-lg">请选择上方卡片开始游戏</div>
 
-            <!-- 修复：猜词不重复逻辑 -->
             <div v-if="activeFunGame === 'guess'" class="h-full bg-[#fef5e7] flex flex-col items-center justify-center p-8 rounded-xl border-4 border-amber-100">
               <div class="flex justify-between w-full max-w-2xl mb-8">
                 <div class="bg-slate-800 text-white px-6 py-2 rounded-full font-bold text-xl shadow">剩余词数：{{ remainingGuessWords.length }}</div>
@@ -213,11 +264,7 @@
               </div>
             </div>
 
-            <!-- 修复：卧底选人与发牌逻辑 -->
             <div v-if="activeFunGame === 'undercover'" class="h-full">
-              <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-purple-700"><i class="fa-solid fa-eye"></i> 卧底发牌台</h2>
-              </div>
               <div class="bg-purple-50 border-2 border-purple-200 p-6 rounded-xl text-center">
                  <p class="mb-4 text-purple-800 font-bold">请在右侧的【在线学生】列表中，点击选中 <b>4</b> 名玩家进入游戏。</p>
                  <div class="flex justify-center gap-4 mb-6">
@@ -235,9 +282,8 @@
               </div>
             </div>
 
-            <!-- 动态词云 -->
             <div v-if="activeFunGame === 'cloud'" class="w-full h-full flex flex-col">
-              <button @click="dispatchCloudTask" class="bg-indigo-600 text-white px-6 py-3 rounded-full font-bold shadow self-center mb-4">推送到手机：要求学生发送词语</button>
+              <button @click="dispatchCloudTask" class="bg-indigo-600 text-white px-6 py-3 rounded-full font-bold shadow self-center mb-4">推送到手机：要求学生发送弹幕</button>
               <div class="cloud-container w-full flex-1">
                 <transition-group name="cloud-pop">
                   <div v-for="word in wordCloudList" :key="word.text" class="cloud-word font-bold" 
@@ -253,18 +299,15 @@
       </template>
     </main>
 
-    <!-- 右侧监控区 (修复：增加二维码和卧底选人) -->
+    <!-- 右侧监控区 -->
     <aside v-show="isRightOpen" class="w-72 bg-white border-l border-slate-200 flex flex-col shrink-0 sticky top-[68px]" style="height: calc(100vh - 68px);">
-      <!-- ✅ 修复 1：二维码区 -->
       <div class="p-4 border-b border-slate-100 flex flex-col items-center bg-slate-50">
         <div id="qrcode-container" class="bg-white p-2 rounded shadow-sm border border-slate-200"></div>
         <p class="text-xs text-slate-500 mt-2 font-bold"><i class="fa-solid fa-mobile-screen mr-1"></i>扫码进入学生端</p>
       </div>
 
-      <!-- 在线学生列表 (用于卧底选人) -->
       <div class="p-3 border-b border-slate-100 bg-white">
         <h3 class="font-bold text-slate-800 text-xs mb-2">🟢 在线学生 ({{ onlineStudents.size }})</h3>
-        <p v-if="activeFunGame === 'undercover'" class="text-[10px] text-rose-500 mb-2">卧底模式：点击名字选人</p>
         <div class="flex flex-wrap gap-1.5">
            <span v-for="name in Array.from(onlineStudents)" :key="name" 
                  @click="toggleUcPlayer(name)"
@@ -275,12 +318,10 @@
         </div>
       </div>
 
-      <!-- 回音壁 -->
       <div class="p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
         <h3 class="font-bold text-slate-800 text-xs"><i class="fa-solid fa-comment-dots text-indigo-600 mr-2"></i>互动回音壁</h3>
       </div>
       <div class="flex-1 p-3 overflow-y-auto bg-[#f8fafc] flex flex-col gap-2" id="echoWall">
-        <div v-if="messages.length === 0" class="h-full flex items-center justify-center text-xs text-slate-400">等待学生发送答案...</div>
         <div v-for="(msg, idx) in messages" :key="idx" class="bg-white p-2 rounded shadow-sm border border-slate-100 animate-fade">
           <div class="flex justify-between items-center mb-1">
             <span class="font-bold text-indigo-700 text-xs truncate">{{ msg.name }}</span><span class="text-[9px] text-slate-400">{{ msg.time }}</span>
@@ -295,9 +336,9 @@
 
 <script>
 const { createApp } = Vue;
-// ✅ 修复 2 & 8：强制使用 WSS 加密通道，保证跨网和 Github Pages 可用
-const MQ_URL = 'wss://7eee84f75e7c4468b6fbc2e450750701.s1.eu.hivemq.cloud:8884/mqtt';
-const MQ_USER = 'Wanghsk'; const MQ_PASS = '2010wanghsk'; const ROOM_ID = 'Wang_HSK_2024';
+// 公共、无需密码的稳定 EMQX 节点
+const MQ_URL = 'wss://broker.emqx.io:8084/mqtt';
+const ROOM_ID = 'Wang_HSK_888_VIP'; 
 
 createApp({
   data() {
@@ -309,12 +350,17 @@ createApp({
       tabs: [
         { id: 'learn', name: '1. 学 (Learn)', icon: 'fa-solid fa-book-open' },
         { id: 'practice', name: '2. 练 (Practice)', icon: 'fa-solid fa-pen-ruler' },
-        { id: 'test', name: '3. 测 (Test)', icon: 'fa-solid fa-vial' },
-        { id: 'fun', name: '4. 趣 (Fun)', icon: 'fa-solid fa-gamepad' }
+        { id: 'race', name: '3. 赛 (Race)', icon: 'fa-solid fa-trophy' },
+        { id: 'test', name: '4. 测 (Test)', icon: 'fa-solid fa-vial' },
+        { id: 'fun', name: '5. 趣 (Fun)', icon: 'fa-solid fa-gamepad' }
       ],
+      // 🚨 6 种题型全部找回
       practiceTabs: [
-        { id: 'vocab_drill', name: '单项选择题 (测)' }, { id: 'colloc', name: '词语搭配 (连线)' }, 
-        { id: 'pinyin_match', name: '拼音配对' }, { id: 'hanzi_match', name: '汉字顺序拼写' },
+        { id: 'vocab_drill', name: '单项选择题' }, 
+        { id: 'colloc', name: '词语搭配' }, 
+        { id: 'pinyin_match', name: '拼音配对' }, 
+        { id: 'lang_match', name: '中俄配对' }, 
+        { id: 'hanzi_match', name: '汉字拼写' },
         { id: 'read_aloud', name: 'HSKK 跟读' }
       ],
       currentPractice: 'vocab_drill', currentDrillIndex: 0,
@@ -324,12 +370,12 @@ createApp({
       collocLeft: [], collocRight: [], collocSelected: null, collocPage: 0, currentCollocLeft: [], currentCollocRight: [],
       drillList: [],
 
-      // 趣的数据状态
+      activeRaceQ: null, raceRevealed: false, answeredRaceQs: [],
+
       activeFunGame: null,
       allGuessWords: [], remainingGuessWords: [], currentGuessWord: null, guessCorrect: 0, guessWrong: 0,
       ucPlayers: [], ucResult: '', wordCloudList: [],
       
-      // 全局状态
       onlineStudents: new Set(), messages: []
     }
   },
@@ -337,29 +383,20 @@ createApp({
     if(this.d) { 
       this.initMQTT(); 
       this.changePractice('vocab_drill'); 
-      
-      // ✅ 渲染二维码
-      setTimeout(() => {
-        const studentUrl = window.location.href.replace('teacher.html', 'student.html');
-        new QRCode(document.getElementById("qrcode-container"), { text: studentUrl, width: 120, height: 120 });
-      }, 500);
-
-      // 加载猜词库
+      setTimeout(() => { new QRCode(document.getElementById("qrcode-container"), { text: window.location.href.replace('teacher.html', 'student.html'), width: 120, height: 120 }); }, 500);
       this.allGuessWords = [...this.d.fun.guess_words];
       this.remainingGuessWords = [...this.allGuessWords];
     }
   },
   methods: {
-    openTest() { window.open('test-index.html', '_blank'); },
-    getPracticeName(id) { return this.practiceTabs.find(t=>t.id===id)?.name || id; },
     getTime() { return new Date().toLocaleTimeString('zh-CN', {hour12:false}); },
     addMsg(name, content) {
       this.messages.push({ name, time: this.getTime(), content });
       this.$nextTick(() => { const w = document.getElementById('echoWall'); if(w) w.scrollTop = w.scrollHeight; });
     },
-
+    // MQTT 初始化
     initMQTT() {
-      this.client = mqtt.connect(MQ_URL, { username: MQ_USER, password: MQ_PASS, clientId: 'T_' + Math.random().toString(16).substr(2) });
+      this.client = mqtt.connect(MQ_URL, { clientId: 'Teacher_' + Math.random().toString(16).substr(2) });
       this.client.on('connect', () => { 
         this.isConnected = true; 
         this.client.subscribe(`wanghsk/room/${ROOM_ID}/answers`); 
@@ -368,50 +405,42 @@ createApp({
       this.client.on('message', (t, m) => {
         try {
           const d = JSON.parse(m.toString());
-          if (t.includes('presence')) {
-             if(d.name) this.onlineStudents.add(d.name);
-          }
-          if (t.includes('answers')) {
-            if(d.name) this.onlineStudents.add(d.name);
-            this.addMsg(d.name || '某同学', d.text || '发来了互动');
-            
-            // 处理词云弹幕
+          if (t.includes('presence') && d.name) { this.onlineStudents.add(d.name); }
+          if (t.includes('answers') && d.name) {
+            this.onlineStudents.add(d.name);
+            this.addMsg(d.name, d.text);
             if(this.activeFunGame === 'cloud' && d.text) {
               const raw = d.text.trim().substring(0, 8);
               const ex = this.wordCloudList.find(w => w.text === raw);
               if(ex) { ex.count++; ex.size = Math.min(100, ex.size + 15); }
-              else {
-                this.wordCloudList.push({ 
-                  text: raw, count: 1, size: 30, color: ['#34d399','#60a5fa','#fbbf24','#f87171','#a78bfa'][Math.floor(Math.random()*5)],
-                  x: 20 + Math.random() * 60, y: 20 + Math.random() * 60
-                });
-              }
+              else { this.wordCloudList.push({ text: raw, count: 1, size: 30, color: ['#34d399','#60a5fa','#fbbf24','#f87171','#a78bfa'][Math.floor(Math.random()*5)], x: 20 + Math.random() * 60, y: 20 + Math.random() * 60 }); }
             }
           }
         } catch(e) {}
       });
     },
+    // 🚨 测 (Test) 跳转
+    openTest() { window.open('test-index.html', '_blank'); },
 
-    // ✅ 向学生端发送题目 (对接您漂亮的 student.html v5题型)
+    // 发题逻辑
     dispatchByMQTT() {
       if(!this.isConnected) return alert("网络未连接！");
       if(this.currentPractice === 'vocab_drill') {
          let q = this.drillList[this.currentDrillIndex];
-         let payload = { phase: 'start', type: 'v5', sentence: q.q, options: q.options, correctAnswer: q.ans };
-         this.client.publish(`wanghsk/room/${ROOM_ID}/question`, JSON.stringify(payload));
+         this.client.publish(`wanghsk/room/${ROOM_ID}/question`, JSON.stringify({ phase: 'start', type: 'v5', sentence: q.q, options: q.options }));
          alert("题目已发送到手机！");
-      } else {
-         alert("目前仅支持推送【单项选择题】。");
       }
     },
     dispatchCloudTask() {
-         let payload = { phase: 'start', type: 'v5', sentence: "☁️ 词云互动：请输入一个形容压力的词汇：", options: [], correctAnswer: "" };
-         // 用特殊方式让手机端显示输入框
-         this.client.publish(`wanghsk/room/${ROOM_ID}/question`, JSON.stringify({ phase: 'start', type: 'text', question: '☁️ 请输入一个形容压力的词语发送到大屏幕：' }));
-         alert("词云输入框已发送！");
+      this.client.publish(`wanghsk/room/${ROOM_ID}/question`, JSON.stringify({ phase: 'start', type: 'text', question: '☁️ 词云互动：请输入弹幕发送到大屏幕：' }));
+      alert("词云输入框已发送到手机！");
+    },
+    sendRaceToStudents() {
+      this.client.publish(`wanghsk/room/${ROOM_ID}/question`, JSON.stringify({ phase: 'start', type: 'text', question: `⚡ 抢答题：${this.activeRaceQ.q}` }));
+      alert("抢答题已发送！请看回音壁谁最快！");
     },
 
-    // ===== 练的互动逻辑 =====
+    // 练逻辑
     changePractice(id) {
       this.currentPractice = id;
       if (['pinyin_match', 'lang_match'].includes(id)) {
@@ -419,7 +448,6 @@ createApp({
       } else if (id === 'hanzi_match') {
         this.allMatchWords = this.d.practice.vocab.filter(v => v.word.length >= 2); this.gamePage = 0; this.loadGamePage();
       } else if (id === 'colloc') {
-        // ✅ 修复 3：左右完全独立打乱，绝不对应
         this.collocLeft = this.d.practice.collocations.map((c, i) => ({uid:'l'+i, text:c.left, pairId:i, matched:false})).sort(()=>Math.random()-0.5);
         this.collocRight = this.d.practice.collocations.map((c, i) => ({uid:'r'+i, text:c.right, pairId:i, matched:false})).sort(()=>Math.random()-0.5);
         this.collocPage = 0; this.loadCollocPage();
@@ -434,16 +462,22 @@ createApp({
       const pageWords = this.allMatchWords.slice(start, start + wordsPerPage);
       let cards = [];
       if (this.currentPractice === 'hanzi_match') {
-        pageWords.forEach((v, i) => { v.word.split('').forEach((char, cIdx) => { cards.push({ uid: 'hz_'+start+'_'+i+'_'+cIdx, text: char, wordObj: v, matched: false }); }); });
+        pageWords.forEach((v, i) => { v.word.split('').forEach((char, cIdx) => { cards.push({ uid: 'hz_'+start+'_'+i+'_'+cIdx, text: char, matched: false }); }); });
+      } else if (this.currentPractice === 'lang_match') {
+        pageWords.forEach((v, i) => { 
+          cards.push({ uid: 'c_z_'+start+'_'+i, text: v.word, pairId: start+i, type: 'a', matched: false, wrong: false }); 
+          cards.push({ uid: 'c_r_'+start+'_'+i, text: v.ru || v.en, pairId: start+i, type: 'b', matched: false, wrong: false }); 
+        });
       } else {
-        pageWords.forEach((v, i) => { cards.push({ uid: 'c_z_'+start+'_'+i, text: v.word, pairId: start+i, type: 'a', matched: false, wrong: false }); cards.push({ uid: 'c_t_'+start+'_'+i, text: v.pinyin, pairId: start+i, type: 'b', matched: false, wrong: false }); });
+        pageWords.forEach((v, i) => { 
+          cards.push({ uid: 'c_z_'+start+'_'+i, text: v.word, pairId: start+i, type: 'a', matched: false, wrong: false }); 
+          cards.push({ uid: 'c_t_'+start+'_'+i, text: v.pinyin, pairId: start+i, type: 'b', matched: false, wrong: false }); 
+        });
       }
       this.currentCards = cards.sort(() => Math.random() - 0.5);
       this.hanziBuffer = []; this.selectedCard = null;
     },
     nextGamePage() { const max = Math.ceil(this.allMatchWords.length / (this.currentPractice === 'hanzi_match' ? 6 : 8)) - 1; this.gamePage = this.gamePage >= max ? 0 : this.gamePage + 1; this.loadGamePage(); },
-    
-    // 汉字拼词
     handleHanziClick(card) {
       if(card.matched || this.hanziBuffer.includes(card)) return;
       this.hanziBuffer.push(card);
@@ -452,7 +486,6 @@ createApp({
       if(matchedVocab) { this.hanziBuffer.forEach(c => c.matched = true); this.hanziBuffer = []; } 
       else { let isPrefix = this.d.practice.vocab.some(v => v.word.startsWith(currentStr)); if(!isPrefix) { this.hanziWrong = true; setTimeout(() => { this.hanziWrong = false; this.hanziBuffer = []; }, 500); } }
     },
-    // 配对连线
     handleCardClick(card) {
       if(card.matched) return;
       if(!this.selectedCard) { this.selectedCard = card; } 
@@ -462,7 +495,6 @@ createApp({
         else { card.wrong = true; this.selectedCard.wrong = true; const prev = this.selectedCard; setTimeout(() => { card.wrong = false; prev.wrong = false; }, 400); this.selectedCard = null; }
       }
     },
-    // 搭配连线
     loadCollocPage() {
       const start = this.collocPage * 5; 
       this.currentCollocLeft = this.collocLeft.slice(start, start + 5);
@@ -484,18 +516,21 @@ createApp({
       }
     },
 
-    // ===== 趣的游戏逻辑 =====
+    // 赛逻辑
+    openRaceQ(catIdx, pts) { this.activeRaceQ = this.d.race.questions.find(x => x.catIdx === catIdx && x.pts === pts); this.raceRevealed = false; },
+    closeRaceQ() { if(this.activeRaceQ && this.raceRevealed) this.answeredRaceQs.push(this.activeRaceQ.id); this.activeRaceQ = null; },
+    isRaceAnswered(catIdx, pts) { const q = this.d.race.questions.find(x => x.catIdx === catIdx && x.pts === pts); return q ? this.answeredRaceQs.includes(q.id) : true; },
+    resetRace() { this.answeredRaceQs = []; this.activeRaceQ = null; },
+
+    // 趣逻辑
     startGuessGame() { this.guessCorrect = 0; this.guessWrong = 0; this.nextGuess(false); },
-    // ✅ 修复 6：不重复抽词
     nextGuess(isC) {
       if(isC) this.guessCorrect++;
       if (this.remainingGuessWords.length === 0) { this.currentGuessWord = "🎉 词库已空！"; return; }
-      const idx = Math.floor(Math.random() * this.remainingGuessWords.length);
-      this.currentGuessWord = this.remainingGuessWords.splice(idx, 1)[0];
+      this.currentGuessWord = this.remainingGuessWords.splice(Math.floor(Math.random() * this.remainingGuessWords.length), 1)[0];
     },
     resetGuessGame() { this.remainingGuessWords = [...this.allGuessWords]; this.guessCorrect = 0; this.currentGuessWord = '准备'; },
     
-    // ✅ 修复 7：卧底选人与发牌
     toggleUcPlayer(name) {
       if(this.activeFunGame !== 'undercover') return;
       if(this.ucPlayers.includes(name)) { this.ucPlayers = this.ucPlayers.filter(n => n !== name); } 
@@ -507,10 +542,8 @@ createApp({
       let arr = [...this.ucPlayers].sort(()=>0.5-Math.random());
       let spy = arr[0]; let civilians = arr.slice(1);
       
-      // 利用 student.html 已有的 private undercover 频道
       this.client.publish(`wanghsk/room/${ROOM_ID}/undercover`, JSON.stringify({ target: spy, role: "卧底", word: pair.spy }));
       civilians.forEach(p => { this.client.publish(`wanghsk/room/${ROOM_ID}/undercover`, JSON.stringify({ target: p, role: "平民", word: pair.civilian })); });
-      
       this.ucResult = `卡牌已发出！<br>卧底是: <b>${spy}</b> [${pair.spy}] <br>平民是: <b>${civilians.join(", ")}</b> [${pair.civilian}]`;
     },
     startCloud() { this.wordCloudList = []; }

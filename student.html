@@ -1,270 +1,137 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<!-- 阻止手机端双击缩放，保证原生 App 体验 -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>王老师课堂 - 学生端</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<!-- 核心：安全 WSS 通讯 -->
-<script src="https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js"></script>
-
-<style>
-    body { background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-    /* 苹果风底部导航栏 */
-    .tab-bar { padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -1px 10px rgba(0,0,0,0.05); }
-    .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0; color: #94a3b8; font-size: 10px; font-weight: 600; transition: color 0.2s;}
-    .tab-item.active { color: #4f46e5; }
-    .tab-item i { font-size: 20px; margin-bottom: 4px; }
-    /* 卡片阴影与圆角 */
-    .ios-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 20px; }
-    /* 弹窗动画 */
-    .modal-enter-active, .modal-leave-active { transition: opacity 0.3s, transform 0.3s; }
-    .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.9); }
-    /* 雷达图占位符 */
-    .radar-bg { background: radial-gradient(circle, #e0e7ff 10%, transparent 10%), radial-gradient(circle, #e0e7ff 10%, transparent 10%); background-size: 20px 20px; background-position: 0 0, 10px 10px; }
-</style>
-</head>
-<body class="h-screen w-screen overflow-hidden flex flex-col">
-<div id="app" class="h-full w-full flex flex-col relative">
-
-    <!-- ================= 1. 登录页面 ================= -->
-    <div v-if="!isJoined" class="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center p-6">
-        <div class="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
-            <i class="fa-solid fa-graduation-cap text-4xl text-indigo-600"></i>
-        </div>
-        <h1 class="text-2xl font-black text-gray-800 mb-2">王老师中文课堂</h1>
-        <p class="text-gray-400 text-sm mb-10">HSK 智能互动系统</p>
-        
-        <div class="w-full max-w-sm space-y-4">
-            <input v-model="myName" type="text" placeholder="请输入你的真实姓名" 
-                   class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-center rounded-xl p-4 font-bold text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-            <button @click="joinClass" :disabled="!myName" 
-                    class="w-full bg-indigo-600 disabled:bg-gray-300 text-white font-bold rounded-xl p-4 text-lg shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition">
-                连接大屏幕
-            </button>
-        </div>
-        <div class="mt-8 text-xs text-gray-400 font-medium flex items-center gap-1">
-            <span class="w-2 h-2 rounded-full" :class="isConnected ? 'bg-green-500' : 'bg-red-500'"></span>
-            {{ isConnected ? '服务器已就绪' : '正在连接服务器...' }}
-        </div>
-    </div>
-
-    <!-- ================= 2. 主体页面 (连线后) ================= -->
-    <div v-else class="flex-1 flex flex-col h-full bg-gray-50 overflow-hidden">
-        
-        <!-- 顶部状态栏 -->
-        <header class="bg-white px-5 py-4 flex justify-between items-center shadow-sm shrink-0">
-            <div>
-                <h2 class="font-bold text-gray-800">{{ myName }}</h2>
-                <p class="text-[10px] text-green-500 font-bold"><i class="fa-solid fa-signal mr-1"></i>已连接</p>
-            </div>
-            <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-lg">
-                {{ myName.charAt(0).toUpperCase() }}
-            </div>
-        </header>
-
-        <!-- 页面区域 -->
-        <main class="flex-1 overflow-y-auto p-4 pb-20">
-            
-            <!-- 【互动答题模块】 -->
-            <div v-show="currentTab === 'interact'" class="h-full flex flex-col">
-                
-                <!-- 待机状态 -->
-                <div v-if="!activeTask" class="flex-1 flex flex-col items-center justify-center text-center">
-                    <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                        <i class="fa-solid fa-satellite-dish text-4xl text-gray-400"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-700 mb-2">请看大屏幕</h3>
-                    <p class="text-gray-400 text-sm">等待老师发送互动题目...</p>
-                </div>
-
-                <!-- 答题状态 (选择题) -->
-                <div v-else-if="activeTask.type === 'v5'" class="ios-card animate-[fadeIn_0.3s]">
-                    <div class="text-xs font-bold text-indigo-500 mb-4 uppercase tracking-wider">单项选择题</div>
-                    <p class="text-lg font-bold text-gray-800 mb-6 leading-relaxed">{{ activeTask.sentence }}</p>
-                    <div class="space-y-3">
-                        <button v-for="opt in activeTask.options" :key="opt" @click="submitAnswer(opt)" 
-                                class="w-full bg-indigo-50 text-indigo-700 border border-indigo-100 p-4 rounded-xl font-bold text-left active:bg-indigo-600 active:text-white transition flex justify-between items-center">
-                            <span>{{ opt }}</span>
-                            <i class="fa-solid fa-chevron-right opacity-50"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 答题状态 (主观题/词云) -->
-                <div v-else-if="activeTask.type === 'text'" class="ios-card animate-[fadeIn_0.3s]">
-                    <div class="text-xs font-bold text-emerald-500 mb-4 uppercase tracking-wider">文字互动</div>
-                    <p class="text-lg font-bold text-gray-800 mb-6">{{ activeTask.question }}</p>
-                    <input v-model="textAnswer" type="text" placeholder="输入词语..." 
-                           class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-center rounded-xl p-4 font-bold text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-4">
-                    <button @click="submitTextAnswer" :disabled="!textAnswer"
-                            class="w-full bg-emerald-500 disabled:bg-gray-300 text-white font-bold rounded-xl p-4 shadow-lg hover:bg-emerald-600 active:scale-95 transition">
-                        发送弹幕 🚀
-                    </button>
-                </div>
-            </div>
-
-            <!-- 【个人分析报告模块】 -->
-            <div v-show="currentTab === 'report'" class="space-y-4">
-                <h2 class="text-xl font-black text-gray-800 mb-4">学情分析报告</h2>
-                
-                <!-- 核心数据卡片 -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="ios-card !p-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                        <p class="text-xs opacity-80 mb-1">当前预估积分</p>
-                        <h3 class="text-3xl font-black">98<span class="text-sm font-normal"> 分</span></h3>
-                    </div>
-                    <div class="ios-card !p-4 bg-gradient-to-br from-emerald-400 to-teal-500 text-white">
-                        <p class="text-xs opacity-80 mb-1">正确率</p>
-                        <h3 class="text-3xl font-black">85<span class="text-sm font-normal"> %</span></h3>
-                    </div>
-                </div>
-
-                <!-- 维度分析 (雷达图占位) -->
-                <div class="ios-card">
-                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">能力维度评估</h3>
-                    <div class="flex items-center gap-4">
-                        <div class="w-24 h-24 rounded-full border-4 border-indigo-100 radar-bg flex items-center justify-center shrink-0">
-                            <span class="text-indigo-600 font-bold text-sm">HSK 4</span>
-                        </div>
-                        <div class="flex-1 space-y-2 text-sm text-gray-600">
-                            <div class="flex justify-between"><span class="font-bold text-gray-700">词汇量</span> <span class="text-emerald-500">优秀</span></div>
-                            <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-emerald-500 h-1.5 rounded-full" style="width: 90%"></div></div>
-                            <div class="flex justify-between mt-2"><span class="font-bold text-gray-700">语法结构</span> <span class="text-amber-500">待提升</span></div>
-                            <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-amber-500 h-1.5 rounded-full" style="width: 65%"></div></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 教师建议 -->
-                <div class="ios-card bg-indigo-50 border border-indigo-100">
-                    <h3 class="font-bold text-indigo-800 mb-2"><i class="fa-solid fa-robot mr-2"></i>AI 与教师点评</h3>
-                    <p class="text-sm text-indigo-700 leading-relaxed">你的课堂活跃度极高！但在长难句（如“无论...都...”）的搭配上容易出错。建议课后复习第 11 课的语法重点。</p>
-                </div>
-            </div>
-
-        </main>
-
-        <!-- 底部导航栏 (iOS 风格) -->
-        <nav class="tab-bar bg-white/90 backdrop-blur-md absolute bottom-0 w-full flex border-t border-gray-100 z-40">
-            <button @click="currentTab = 'interact'" class="tab-item" :class="{'active': currentTab === 'interact'}">
-                <i class="fa-solid fa-gamepad"></i>
-                <span>互动</span>
-            </button>
-            <button @click="currentTab = 'report'" class="tab-item" :class="{'active': currentTab === 'report'}">
-                <i class="fa-solid fa-chart-pie"></i>
-                <span>报告</span>
-            </button>
-        </nav>
-    </div>
-
-    <!-- ================= 3. 谁是卧底 私密弹窗 ================= -->
-    <transition name="modal">
-        <div v-if="undercoverWord" class="absolute inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div class="bg-white w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-amber-400 to-orange-500"></div>
-                <h2 class="text-gray-500 font-bold mb-2">🤫 你的专属身份牌</h2>
-                <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl py-10 my-6">
-                    <h1 class="text-5xl font-black text-amber-600 tracking-wider">{{ undercoverWord }}</h1>
-                </div>
-                <p class="text-gray-400 text-sm mb-6">嘘...千万不要给旁边的人看到哦！轮到你时，请用中文描述这个词。</p>
-                <button @click="undercoverWord = null" class="w-full bg-gray-800 text-white font-bold py-4 rounded-xl text-lg active:scale-95 transition">
-                    我知道了
-                </button>
-            </div>
-        </div>
-    </transition>
-
-</div>
-
-<script>
-const { createApp } = Vue;
-// 安全 WSS 通讯参数（必须与 teacher.html 完全一致）
-const MQ_URL = 'wss://7eee84f75e7c4468b6fbc2e450750701.s1.eu.hivemq.cloud:8884/mqtt';
-const MQ_USER = 'Wanghsk'; const MQ_PASS = '2010wanghsk'; const ROOM_ID = 'Wang_HSK_2024';
-
-createApp({
-    data() {
-        return {
-            myName: '',
-            isJoined: false,
-            isConnected: false,
-            client: null,
-            currentTab: 'interact', // 'interact' 或 'report'
-            
-            activeTask: null, // 存放老师发来的题目对象
-            textAnswer: '',   // 词云等主观题输入
-            undercoverWord: null // 卧底词汇
-        }
+window.HSK_DATA = {
+    lessonInfo: { 
+        id: "hsk4_lesson_11", 
+        level: "HSK 4", 
+        title: "第 11 课：《读书好，读好书，好读书》" 
     },
-    mounted() {
-        // 预先连接 MQTT 服务器
-        this.client = mqtt.connect(MQ_URL, { 
-            username: MQ_USER, password: MQ_PASS, 
-            clientId: 'S_' + Math.random().toString(16).substr(2) 
-        });
-        
-        this.client.on('connect', () => { 
-            this.isConnected = true; 
-        });
-
-        // 监听消息
-        this.client.on('message', (topic, message) => {
-            try {
-                const data = JSON.parse(message.toString());
-                
-                // 1. 收到大屏题目
-                if (topic === `wanghsk/room/${ROOM_ID}/question`) {
-                    if (data.phase === 'start') {
-                        this.activeTask = data;
-                        this.textAnswer = '';
-                        this.currentTab = 'interact'; // 强制跳转到互动页
-                        // 震动提示 (如果手机支持)
-                        if (navigator.vibrate) navigator.vibrate(200);
-                    }
-                }
-                
-                // 2. 收到【谁是卧底】身份牌 (只拦截发给自己的)
-                if (topic === `wanghsk/room/${ROOM_ID}/undercover`) {
-                    if (data.target === this.myName) {
-                        this.undercoverWord = data.word;
-                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                    }
-                }
-            } catch(e) { console.error("解析错误", e); }
-        });
+    
+    // 真实学生名单 (14人)
+    students: [
+        "FATEEV ALEKSANDR", "IVANOV KONSTANTIN", "SANGADZHIEV DZHIRGAL", 
+        "BARILOVICH ELIZAVETA", "SARAYKIN ANDREY", "GORELOVA ELIZAVETA", 
+        "SHCHELOKOVA KSENIIA", "VOROBEV ANDREI", "SHUMAKHOV DAMIR", 
+        "MANOKHIN MAKSIM", "KLYUCHIKOV EGOR", "IVANOV KIRILL", 
+        "LESHCHINSKAIA OLESIA", "MANUYLOV ALEXANDER"
+    ],
+    
+    // 课件链接
+    learn: { 
+        slidesUrl: "https://docs.google.com/presentation/d/1ja_8u2MGPAB-nSnBF6VqxwxmmhEiMsyi/embed?start=false&loop=false&delayms=3000" 
     },
-    methods: {
-        joinClass() {
-            if (!this.myName.trim()) return;
-            this.isJoined = true;
-            
-            // 订阅频道
-            this.client.subscribe(`wanghsk/room/${ROOM_ID}/question`);
-            this.client.subscribe(`wanghsk/room/${ROOM_ID}/undercover`);
-            
-            // 告诉大屏我上线了
-            this.client.publish(`wanghsk/room/${ROOM_ID}/presence`, JSON.stringify({ name: this.myName }));
-        },
-        
-        // 发送选择题答案
-        submitAnswer(ans) {
-            this.client.publish(`wanghsk/room/${ROOM_ID}/answers`, JSON.stringify({ name: this.myName, text: ans }));
-            this.activeTask = null; // 答完隐藏题目，回到待机
-        },
-        
-        // 发送词云/文本答案
-        submitTextAnswer() {
-            if(!this.textAnswer.trim()) return;
-            this.client.publish(`wanghsk/room/${ROOM_ID}/answers`, JSON.stringify({ name: this.myName, text: this.textAnswer }));
-            this.activeTask = null;
-            this.textAnswer = '';
-        }
+    
+    practice: {
+        // 30个核心生词 (中、拼、俄)
+        vocab: [
+            { id: "v_01", word: "流利", pinyin: "liúlì", ru: "бегло" },
+            { id: "v_02", word: "厉害", pinyin: "lìhai", ru: "сильный" },
+            { id: "v_03", word: "语法", pinyin: "yǔfǎ", ru: "грамматика" },
+            { id: "v_04", word: "准确", pinyin: "zhǔnquè", ru: "точный" },
+            { id: "v_05", word: "词语", pinyin: "cíyǔ", ru: "слова" },
+            { id: "v_06", word: "连", pinyin: "lián", ru: "даже" },
+            { id: "v_07", word: "阅读", pinyin: "yuèdú", ru: "чтение" },
+            { id: "v_08", word: "来得及", pinyin: "láidejí", ru: "успевать" },
+            { id: "v_09", word: "复杂", pinyin: "fùzá", ru: "сложный" },
+            { id: "v_10", word: "只好", pinyin: "zhǐhǎo", ru: "приходится" },
+            { id: "v_11", word: "填空", pinyin: "tiánkòng", ru: "заполнять" },
+            { id: "v_12", word: "猜", pinyin: "cāi", ru: "угадывать" },
+            { id: "v_13", word: "否则", pinyin: "fǒuzé", ru: "иначе" },
+            { id: "v_14", word: "客厅", pinyin: "kètīng", ru: "гостиная" },
+            { id: "v_15", word: "无论", pinyin: "wúlùn", ru: "независимо" },
+            { id: "v_16", word: "杂志", pinyin: "zázhì", ru: "журнал" },
+            { id: "v_17", word: "著名", pinyin: "zhùmíng", ru: "известный" },
+            { id: "v_18", word: "页", pinyin: "yè", ru: "страница" },
+            { id: "v_19", word: "增加", pinyin: "zēngjiā", ru: "увеличивать" },
+            { id: "v_20", word: "文章", pinyin: "wénzhāng", ru: "статья" },
+            { id: "v_21", word: "之", pinyin: "zhī", ru: "связка" },
+            { id: "v_22", word: "内容", pinyin: "nèiróng", ru: "содержание" },
+            { id: "v_23", word: "然而", pinyin: "rán'ér", ru: "однако" },
+            { id: "v_24", word: "看法", pinyin: "kànfǎ", ru: "мнение" },
+            { id: "v_25", word: "相同", pinyin: "xiāngtóng", ru: "одинаковый" },
+            { id: "v_26", word: "顺序", pinyin: "shùnxù", ru: "порядок" },
+            { id: "v_27", word: "表示", pinyin: "biǎoshì", ru: "выражать" },
+            { id: "v_28", word: "养成", pinyin: "yǎngchéng", ru: "формировать" },
+            { id: "v_29", word: "同时", pinyin: "tóngshí", ru: "одновременно" },
+            { id: "v_30", word: "精彩", pinyin: "jīngcǎi", ru: "замечательный" }
+        ],
+        // 15组核心搭配
+        collocations: [
+            { id: "c_01", left: "说得非常", right: "流利" }, { id: "c_02", left: "头疼得", right: "厉害" },
+            { id: "c_03", left: "表达不太", right: "准确" }, { id: "c_04", left: "查字典找", right: "词语" },
+            { id: "c_05", left: "著名的", right: "作家" }, { id: "c_06", left: "养成好", right: "习惯" },
+            { id: "c_07", left: "增加", right: "知识" }, { id: "c_08", left: "减轻", right: "压力" },
+            { id: "c_09", left: "复杂的", right: "问题" }, { id: "c_10", left: "精彩的", right: "比赛" },
+            { id: "c_11", left: "翻译", right: "小说" }, { id: "c_12", left: "抓住", right: "重点" },
+            { id: "c_13", left: "阅读", right: "杂志" }, { id: "c_14", left: "表示", right: "感谢" },
+            { id: "c_15", left: "随便", right: "聊天" }
+        ],
+        // 5道 HSKK 长难句跟读
+        reading_aloud: [
+            { id: "r_01", text: "你来中国才一年，汉语就说得这么流利，真是让人佩服！" },
+            { id: "r_02", text: "看来要想考好，还得注意考试的方法，否则会做的题也没时间做了。" },
+            { id: "r_03", text: "坚持阅读，除了能增加我们的知识外，还能帮助我们减轻生活中的压力。" },
+            { id: "r_04", text: "那个著名的作家说过，把复杂的问题用流利的语言表达出来，是一种很厉害的能力。" },
+            { id: "r_05", text: "虽然大家对这本书的评价各不相同，但我仍然觉得它值得仔细阅读。" }
+        ],
+        // 30道完整词汇操练
+        vocab_drill: [
+            { id: "vd_01", q: "你来中国才一年，汉语就说得这么____。", options: ["流利", "准确", "复杂"], ans: "流利" },
+            { id: "vd_02", q: "今天头疼得____，我想请假。", options: ["厉害", "著名", "流利"], ans: "厉害" },
+            { id: "vd_03", q: "下大雨了，我们____待在家里。", options: ["只好", "然而", "否则"], ans: "只好" },
+            { id: "vd_04", q: "你快点跑，____就要迟到了。", options: ["否则", "然而", "无论"], ans: "否则" },
+            { id: "vd_05", q: "他每天坚持锻炼，____了早起的好习惯。", options: ["变成", "养成", "造成"], ans: "养成" },
+            { id: "vd_06", q: "听音乐可以帮助我们____工作压力。", options: ["减少", "减轻", "变小"], ans: "减轻" },
+            { id: "vd_07", q: "由于紧张，他面试的时候____得不太流利。", options: ["表达", "表现", "表示"], ans: "表达" },
+            { id: "vd_08", q: "这本书的作者是一位非常____的作家。", options: ["著名", "清楚", "随便"], ans: "著名" },
+            { id: "vd_09", q: "这个问题太____了，我需要时间想想。", options: ["简单", "复杂", "随便"], ans: "复杂" },
+            { id: "vd_10", q: "多读书可以丰富我们的____。", options: ["认识", "知识", "知道"], ans: "知识" },
+            { id: "vd_11", q: "小明平时很____，不爱跟陌生人说话。", options: ["随便", "害羞", "流利"], ans: "害羞" },
+            { id: "vd_12", q: "穿衣服不能太____，要注意场合。", options: ["复杂", "随便", "著名"], ans: "随便" },
+            { id: "vd_13", q: "大家对这部电影的评价____。", options: ["各不相同", "完全一样", "非常随便"], ans: "各不相同" },
+            { id: "vd_14", q: "请大家按照从高到矮的____排好队。", options: ["顺序", "内容", "重点"], ans: "顺序" },
+            { id: "vd_15", q: "这两件衣服的颜色完全____。", options: ["相同", "不同", "复杂"], ans: "相同" },
+            { id: "vd_16", q: "他对大家的帮助____了真诚的感谢。", options: ["表现", "表示", "表达"], ans: "表示" },
+            { id: "vd_17", q: "我们要学好专业知识，____还要锻炼身体。", options: ["同时", "平时", "按时"], ans: "同时" },
+            { id: "vd_18", q: "昨晚那场足球比赛真是太____了！", options: ["著名", "精彩", "流利"], ans: "精彩" },
+            { id: "vd_19", q: "他忙得____吃午饭的时间都没有。", options: ["即使", "尽管", "甚至"], ans: "甚至" },
+            { id: "vd_20", q: "她大学学的是英语，毕业后当了____。", options: ["翻译", "作家", "记者"], ans: "翻译" },
+            { id: "vd_21", q: "这本____上有很多关于旅游的文章。", options: ["日记", "杂志", "小说"], ans: "杂志" },
+            { id: "vd_22", q: "最近几个月，公司的收入____了不少。", options: ["增加", "减少", "减轻"], ans: "增加" },
+            { id: "vd_23", q: "这篇文章的____写得非常好。", options: ["重点", "内容", "结果"], ans: "内容" },
+            { id: "vd_24", q: "老师讲课的时候，一定要认真听____。", options: ["重点", "复杂", "知识"], ans: "重点" },
+            { id: "vd_25", q: "时间久了，他们之间产生了深厚的____。", options: ["感情", "事情", "心情"], ans: "感情" },
+            { id: "vd_26", q: "哥哥很幽默，经常给大家讲____。", options: ["文章", "小说", "笑话"], ans: "笑话" },
+            { id: "vd_27", q: "只要坚持这个方法，一定能看到____。", options: ["效果", "后果", "结果"], ans: "效果" },
+            { id: "vd_28", q: "学习需要长期坚持，是一个长期的____。", options: ["过程", "结果", "顺序"], ans: "过程" },
+            { id: "vd_29", q: "要想掌握外语，____的练习是必不可少的。", options: ["丰富", "复杂", "大量"], ans: "大量" },
+            { id: "vd_30", q: "遇到不懂的____，你可以随时来问我。", options: ["压力", "习惯", "问题"], ans: "问题" }
+        ]
+    },
+    
+    // 诸神之战
+    race: {
+        categories: ["生词挑战", "语法风暴", "课文透视"],
+        questions: [
+            { id: "j_0_10", catIdx: 0, pts: 10, q: "“complicated”对应的中文是？", a: "复杂" },
+            { id: "j_0_20", catIdx: 0, pts: 20, q: "填空：我的牙最近疼得____。", a: "厉害" },
+            { id: "j_0_30", catIdx: 0, pts: 30, q: "“杂志”的量词是什么？", a: "本" },
+            { id: "j_1_10", catIdx: 1, pts: 10, q: "他太穷了，____吃饭的钱都没有。", a: "连" },
+            { id: "j_1_20", catIdx: 1, pts: 20, q: "判断：不管如何，我都要去。", a: "错 (应为：无论如何)" },
+            { id: "j_1_30", catIdx: 1, pts: 30, q: "你快点跑，____就迟到了。(然而 / 否则)", a: "否则" },
+            { id: "j_2_10", catIdx: 2, pts: 10, q: "小雨为什么没做完考试题？", a: "先做了复杂的题" },
+            { id: "j_2_20", catIdx: 2, pts: 20, q: "“好读书”的意思是什么？", a: "养成阅读的好习惯" },
+            { id: "j_2_30", catIdx: 2, pts: 30, q: "提高阅读能力的方法有哪些？", a: "多读、做读书笔记" }
+        ]
+    },
+    
+    // 趣版块
+    fun: {
+        guess_words: ["流利", "厉害", "语法", "准确", "词语", "连", "阅读", "来得及", "复杂", "只好", "填空", "猜", "否则", "客厅", "无论", "杂志", "著名", "页", "增加", "文章", "内容", "然而", "看法", "相同", "顺序", "表示", "养成", "同时", "精彩", "翻译"],
+        undercover: [
+            { id: "fu_01", civilian: "阅读", spy: "看书" },
+            { id: "fu_02", civilian: "准确", spy: "正确" },
+            { id: "fu_03", civilian: "杂志", spy: "报纸" },
+            { id: "fu_04", civilian: "习惯", spy: "爱好" },
+            { id: "fu_05", civilian: "复杂", spy: "麻烦" }
+        ]
     }
-}).mount('#app');
-</script>
-</body>
-</html>
+};

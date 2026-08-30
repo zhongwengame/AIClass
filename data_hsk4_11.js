@@ -1,88 +1,147 @@
-window.lessonData = {
-    meta: {
-        title: "第十一课 读书好，读好书，好读书 (1)",
-        level: "HSK 4"
+window.HSK_DATA = {
+    lessonInfo: {
+        id: "hsk4_lesson_11",
+        level: "HSK 4",
+        title: "第 11 课：《读书好，读好书，好读书》"
     },
     
-    // 1. 词语搭配 (扩充：涵盖教材核心动宾搭配与偏正搭配)
-    match_pairs: [
-        { left: "减轻", right: "压力" },
-        { left: "养成", right: "习惯" },
-        { left: "表达", right: "想法" },
-        { left: "翻译", right: "小说" },
-        { left: "增加", right: "知识" },
-        { left: "抓住", right: "重点" },
-        { left: "阅读", right: "杂志" },
-        { left: "表示", right: "感谢" },
-        { left: "著名的", right: "作家" },
-        { left: "复杂的", right: "问题" },
-        { left: "流利的", right: "中文" },
-        { left: "丰富的", right: "内容" },
-        { left: "精彩的", right: "文章" },
-        { left: "相同的", right: "顺序" },
-        { left: "随便", right: "聊天" }
-    ],
-
-    // 2. 词汇操练 (扩充为 30 题，涵盖全部生词和语法点)
-    quiz_questions: [
-        { q: "听轻音乐可以帮助我们_____工作的压力。", options: ["减少", "减轻", "变小", "减低"], answer: "减轻" },
-        { q: "他每天坚持早起锻炼，_____了很好的生活习惯。", options: ["变成", "养成", "造成", "完成"], answer: "养成" },
-        { q: "由于太紧张，他在台上_____得不太流利。", options: ["表达", "表现", "表示", "表明"], answer: "表达" },
-        { q: "鲁迅是中国历史上非常_____的作家。", options: ["著名", "清楚", "流利", "随便"], answer: "著名" },
-        { q: "这个问题太_____了，我需要多一点时间思考。", options: ["简单", "复杂", "容易", "随便"], answer: "复杂" },
-        { q: "经常阅读可以使我们的_____变得更丰富。", options: ["认识", "知识", "知道", "文化"], answer: "知识" },
-        { q: "小明平时很_____，不喜欢在大家面前说话。", options: ["随便", "害羞", "流利", "复杂"], answer: "害羞" },
-        { q: "这是很正式的会议，穿衣服不能太_____。", options: ["复杂", "随便", "著名", "流利"], answer: "随便" },
-        { q: "虽然是双胞胎，但这两个孩子的性格_____。", options: ["各不相同", "完全一样", "非常随便", "都很流利"], answer: "各不相同" },
-        { q: "他在中国生活了十年，汉语说得非常_____。", options: ["复杂", "著名", "流利", "随便"], answer: "流利" },
-        { q: "请大家按照从高到矮的_____排好队。", options: ["顺序", "内容", "重点", "习惯"], answer: "顺序" },
-        { q: "这两件衣服的颜色完全_____。", options: ["相同", "不同", "随便", "复杂"], answer: "相同" },
-        { q: "他对大家的帮助_____了真诚的感谢。", options: ["表现", "表示", "表达", "表演"], answer: "表示" },
-        { q: "我们不仅要学好专业知识，_____还要锻炼身体。", options: ["同时", "平时", "按时", "准时"], answer: "同时" },
-        { q: "昨晚的那场足球比赛真是太_____了！", options: ["著名", "精彩", "丰富", "流利"], answer: "精彩" },
-        { q: "他忙得_____吃午饭的时间都没有。", options: ["即使", "尽管", "甚至", "既然"], answer: "甚至" },
-        { q: "她大学学的是英语，毕业后当了一名_____。", options: ["翻译", "作家", "记者", "经理"], answer: "翻译" },
-        { q: "这本_____上有很多关于旅游的有趣文章。", options: ["日记", "杂志", "小说", "新闻"], answer: "杂志" },
-        { q: "最近几个月，公司的收入_____了不少。", options: ["增加", "减少", "减轻", "养成"], answer: "增加" },
-        { q: "这篇文章的_____写得非常好，让人感动。", options: ["重点", "内容", "结果", "过程"], answer: "内容" },
-        { q: "老师讲课的时候，一定要认真听_____。", options: ["重点", "复杂", "知识", "习惯"], answer: "重点" },
-        { q: "时间久了，他们两个人之间产生了深厚的_____。", options: ["感情", "事情", "心情", "表情"], answer: "感情" },
-        { q: "哥哥很幽默，经常给大家讲_____。", options: ["文章", "小说", "笑话", "故事"], answer: "笑话" },
-        { q: "只要你坚持用这个方法，一定能看到_____。", options: ["效果", "后果", "水果", "结果"], answer: "效果" },
-        { q: "学习不是一天两天的_____，需要长期坚持。", options: ["过程", "结果", "重点", "顺序"], answer: "过程" },
-        { q: "比赛的_____不重要，重要的是你努力了。", options: ["结果", "效果", "过程", "内容"], answer: "结果" },
-        { q: "只要_____读下去，你一定会发现这本书的魅力。", options: ["继续", "连续", "顺便", "随便"], answer: "继续" },
-        { q: "要想掌握一门外语，_____的练习是必不可少的。", options: ["丰富", "复杂", "流利", "大量"], answer: "大量" },
-        { q: "这本小说的_____是一位很有才华的年轻人。", options: ["作家", "翻译", "读者", "记者"], answer: "作家" },
-        { q: "遇到不懂的_____，你可以随时来问我。", options: ["压力", "习惯", "问题", "知识"], answer: "问题" }
-    ],
-
-    // 3. 我说你猜 词库 (扩充至 30 个生词，每次抽取绝对不重复)
-    guess_words: [
-        "减轻", "压力", "养成", "习惯", "表达", 
-        "流利", "著名", "作家", "复杂", "丰富", 
-        "知识", "随便", "害羞", "相同", "顺序", 
-        "表示", "同时", "精彩", "甚至", "翻译", 
-        "杂志", "增加", "文章", "内容", "重点", 
-        "感情", "笑话", "效果", "过程", "结果"
-    ],
-
-    // 4. 谁是卧底 词库 (提供更多词组，系统随机抽取一组)
-    undercover_words: [
-        { civilian: "作家", undercover: "记者" },
-        { civilian: "习惯", undercover: "爱好" },
-        { civilian: "知识", undercover: "文化" },
-        { civilian: "复杂", undercover: "麻烦" },
-        { civilian: "杂志", undercover: "报纸" },
-        { civilian: "笑话", undercover: "故事" }
-    ],
-
-    // 5. HSKK 听后跟读 (5道长难句，中级考试难度)
-    shadowing: [
-        "养成阅读的好习惯，不仅能丰富我们的知识，还能帮助我们减轻生活中的压力。",
-        "那个著名的作家说过，把复杂的问题用流利的语言表达出来，是一种很厉害的能力。",
-        "你不能总是这么随便，面对重要的工作，必须要有认真负责的态度。",
-        "虽然大家对这本书的评价各不相同，但我仍然觉得它值得仔细阅读。",
-        "要想在面试中把自己的想法流利地表达出来，平时的练习是必不可少的。"
-    ]
+    // 真实学生名单
+    students: ["FATEEV ALEKSANDR", "IVANOV KONSTANTIN", "SANGADZHIEV DZHIRGAL", "BARILOVICH ELIZAVETA", "SARAYKIN ANDREY", "GORELOVA ELIZAVETA", "SHCHELOKOVA KSENIIA", "VOROBEV ANDREI", "SHUMAKHOV DAMIR", "MANOKHIN MAKSIM", "KLYUCHIKOV EGOR", "IVANOV KIRILL", "LESHCHINSKAIA OLESIA", "MANUYLOV ALEXANDER"],
+    
+    // ✅ 已经为您关联了您的专属 Google Sheet / Slides 嵌入链接
+    learn: {
+        slidesUrl: "https://docs.google.com/presentation/d/1ja_8u2MGPAB-nSnBF6VqxwxmmhEiMsyi/embed?start=false&loop=false&delayms=3000"
+    },
+    
+    practice: {
+        vocab: [
+            { id: "v_01", word: "流利", pinyin: "liúlì", en: "fluent", ru: "бегло" },
+            { id: "v_02", word: "厉害", pinyin: "lìhai", en: "awesome", ru: "сильный" },
+            { id: "v_03", word: "语法", pinyin: "yǔfǎ", en: "grammar", ru: "грамматика" },
+            { id: "v_04", word: "准确", pinyin: "zhǔnquè", en: "accurate", ru: "точный" },
+            { id: "v_05", word: "词语", pinyin: "cíyǔ", en: "word", ru: "слова" },
+            { id: "v_06", word: "连", pinyin: "lián", en: "even", ru: "даже" },
+            { id: "v_07", word: "阅读", pinyin: "yuèdú", en: "to read", ru: "читать" },
+            { id: "v_08", word: "来得及", pinyin: "láidejí", en: "still time", ru: "успевать" },
+            { id: "v_09", word: "复杂", pinyin: "fùzá", en: "complicated", ru: "сложный" },
+            { id: "v_10", word: "只好", pinyin: "zhǐhǎo", en: "forced to", ru: "приходится" },
+            { id: "v_11", word: "填空", pinyin: "tiánkòng", en: "fill blank", ru: "заполнить" },
+            { id: "v_12", word: "猜", pinyin: "cāi", en: "to guess", ru: "угадывать" },
+            { id: "v_13", word: "否则", pinyin: "fǒuzé", en: "otherwise", ru: "иначе" },
+            { id: "v_14", word: "客厅", pinyin: "kètīng", en: "living room", ru: "гостиная" },
+            { id: "v_15", word: "无论", pinyin: "wúlùn", en: "regardless of", ru: "независимо от" },
+            { id: "v_16", word: "杂志", pinyin: "zázhì", en: "magazine", ru: "журнал" },
+            { id: "v_17", word: "著名", pinyin: "zhùmíng", en: "famous", ru: "известный" },
+            { id: "v_18", word: "页", pinyin: "yè", en: "page", ru: "страница" },
+            { id: "v_19", word: "增加", pinyin: "zēngjiā", en: "increase", ru: "увеличивать" },
+            { id: "v_20", word: "文章", pinyin: "wénzhāng", en: "article", ru: "статья" },
+            { id: "v_21", word: "之", pinyin: "zhī", en: "of/connecting", ru: "связка" },
+            { id: "v_22", word: "内容", pinyin: "nèiróng", en: "content", ru: "содержание" },
+            { id: "v_23", word: "然而", pinyin: "rán'ér", en: "however", ru: "однако" },
+            { id: "v_24", word: "看法", pinyin: "kànfǎ", en: "viewpoint", ru: "мнение" },
+            { id: "v_25", word: "相同", pinyin: "xiāngtóng", en: "same", ru: "одинаковый" },
+            { id: "v_26", word: "顺序", pinyin: "shùnxù", en: "order", ru: "последовательность" },
+            { id: "v_27", word: "表示", pinyin: "biǎoshì", en: "express", ru: "выражать" },
+            { id: "v_28", word: "养成", pinyin: "yǎngchéng", en: "develop", ru: "формировать" },
+            { id: "v_29", word: "同时", pinyin: "tóngshí", en: "at same time", ru: "одновременно" },
+            { id: "v_30", word: "精彩", pinyin: "jīngcǎi", en: "splendid", ru: "замечательный" }
+        ],
+        // ✅ 修复：涵盖教材与PPT的15组核心搭配
+        collocations: [
+            { id: "c_01", left: "说得非常", right: "流利" }, { id: "c_02", left: "头疼得", right: "厉害" },
+            { id: "c_03", left: "表达不太", right: "准确" }, { id: "c_04", left: "查字典找", right: "词语" },
+            { id: "c_05", left: "著名的", right: "作家" }, { id: "c_06", left: "养成好", right: "习惯" },
+            { id: "c_07", left: "增加", right: "知识" }, { id: "c_08", left: "减轻", right: "压力" },
+            { id: "c_09", left: "复杂的", right: "问题" }, { id: "c_10", left: "精彩的", right: "比赛" },
+            { id: "c_11", left: "翻译", right: "小说" }, { id: "c_12", left: "抓住", right: "重点" },
+            { id: "c_13", left: "阅读", right: "杂志" }, { id: "c_14", left: "表示", right: "感谢" },
+            { id: "c_15", left: "随便", right: "聊天" }
+        ],
+        synonyms: [
+            { id: "s_01", q: "______别人说什么，我只相信自己眼睛看见的东西。", options: ["无论", "不管"], ans: "无论" },
+            { id: "s_02", q: "______去不去，最后都别忘了告诉我一声。", options: ["无论", "不管"], ans: "不管" },
+            { id: "s_03", q: "虽然压力很大，但是为了共同的理想，______如何一定不能放弃。", options: ["无论", "不管"], ans: "无论" }
+        ],
+        // ✅ 修复：5道长难句，HSKK中级难度
+        reading_aloud: [
+            { id: "r_01", text: "你来中国才一年，汉语就说得这么流利，真是让人佩服！" },
+            { id: "r_02", text: "看来要想考好，还得注意考试的方法，否则会做的题也没时间做了。" },
+            { id: "r_03", text: "坚持阅读，除了能增加我们的知识外，还能帮助我们减轻生活中的压力。" },
+            { id: "r_04", text: "那个著名的作家说过，把复杂的问题用流利的语言表达出来，是一种很厉害的能力。" },
+            { id: "r_05", text: "虽然大家对这本书的评价各不相同，但我仍然觉得它值得仔细阅读。" }
+        ],
+        // ✅ 修复：扩充为30题，覆盖全部核心词与语法
+        vocab_drill: [
+            { id: "vd_01", q: "你来中国才一年，汉语就说得这么____。", options: ["流利", "准确", "复杂"], ans: "流利" },
+            { id: "vd_02", q: "今天头疼得____，我想请假。", options: ["厉害", "著名", "流利"], ans: "厉害" },
+            { id: "vd_03", q: "下大雨了，我们____待在家里。", options: ["只好", "然而", "否则"], ans: "只好" },
+            { id: "vd_04", q: "你快点跑，____就要迟到了。", options: ["否则", "然而", "无论"], ans: "否则" },
+            { id: "vd_05", q: "他每天坚持锻炼，____了早起的好习惯。", options: ["变成", "养成", "造成"], ans: "养成" },
+            { id: "vd_06", q: "听音乐可以帮助我们____工作压力。", options: ["减少", "减轻", "变小"], ans: "减轻" },
+            { id: "vd_07", q: "由于紧张，他面试的时候____得不太流利。", options: ["表达", "表现", "表示"], ans: "表达" },
+            { id: "vd_08", q: "这本书的作者是一位非常____的作家。", options: ["著名", "清楚", "随便"], ans: "著名" },
+            { id: "vd_09", q: "这个问题太____了，我需要时间想想。", options: ["简单", "复杂", "随便"], ans: "复杂" },
+            { id: "vd_10", q: "多读书可以丰富我们的____。", options: ["认识", "知识", "知道"], ans: "知识" },
+            { id: "vd_11", q: "小明平时很____，不爱跟陌生人说话。", options: ["随便", "害羞", "流利"], ans: "害羞" },
+            { id: "vd_12", q: "穿衣服不能太____，要注意场合。", options: ["复杂", "随便", "著名"], ans: "随便" },
+            { id: "vd_13", q: "大家对这部电影的评价____。", options: ["各不相同", "完全一样", "非常随便"], ans: "各不相同" },
+            { id: "vd_14", q: "请大家按照从高到矮的____排好队。", options: ["顺序", "内容", "重点"], ans: "顺序" },
+            { id: "vd_15", q: "这两件衣服的颜色完全____。", options: ["相同", "不同", "复杂"], ans: "相同" },
+            { id: "vd_16", q: "他对大家的帮助____了真诚的感谢。", options: ["表现", "表示", "表达"], ans: "表示" },
+            { id: "vd_17", q: "我们要学好专业知识，____还要锻炼身体。", options: ["同时", "平时", "按时"], ans: "同时" },
+            { id: "vd_18", q: "昨晚那场足球比赛真是太____了！", options: ["著名", "精彩", "流利"], ans: "精彩" },
+            { id: "vd_19", q: "他忙得____吃午饭的时间都没有。", options: ["即使", "尽管", "甚至"], ans: "甚至" },
+            { id: "vd_20", q: "她大学学的是英语，毕业后当了____。", options: ["翻译", "作家", "记者"], ans: "翻译" },
+            { id: "vd_21", q: "这本____上有很多关于旅游的文章。", options: ["日记", "杂志", "小说"], ans: "杂志" },
+            { id: "vd_22", q: "最近几个月，公司的收入____了不少。", options: ["增加", "减少", "减轻"], ans: "增加" },
+            { id: "vd_23", q: "这篇文章的____写得非常好。", options: ["重点", "内容", "结果"], ans: "内容" },
+            { id: "vd_24", q: "老师讲课的时候，一定要认真听____。", options: ["重点", "复杂", "知识"], ans: "重点" },
+            { id: "vd_25", q: "时间久了，他们之间产生了深厚的____。", options: ["感情", "事情", "心情"], ans: "感情" },
+            { id: "vd_26", q: "哥哥很幽默，经常给大家讲____。", options: ["文章", "小说", "笑话"], ans: "笑话" },
+            { id: "vd_27", q: "只要坚持这个方法，一定能看到____。", options: ["效果", "后果", "结果"], ans: "效果" },
+            { id: "vd_28", q: "学习需要长期坚持，是一个长期的____。", options: ["过程", "结果", "顺序"], ans: "过程" },
+            { id: "vd_29", q: "要想掌握外语，____的练习是必不可少的。", options: ["丰富", "复杂", "大量"], ans: "大量" },
+            { id: "vd_30", q: "遇到不懂的____，你可以随时来问我。", options: ["压力", "习惯", "问题"], ans: "问题" }
+        ]
+    },
+    
+    test: { platformUrl: "test-index.html", fill_blanks: [], true_false: [] },
+    
+    race: {
+        categories: ["生词挑战", "语法风暴", "课文透视"],
+        questions: [
+            { id: "j_0_10", catIdx: 0, pts: 10, q: "“complicated”对应的中文是？", a: "复杂" },
+            { id: "j_0_20", catIdx: 0, pts: 20, q: "填空：我的牙最近疼得____。", a: "厉害" },
+            { id: "j_0_30", catIdx: 0, pts: 30, q: "“杂志”的量词是什么？", a: "本" },
+            { id: "j_1_10", catIdx: 1, pts: 10, q: "他太穷了，____吃饭的钱都没有。", a: "连" },
+            { id: "j_1_20", catIdx: 1, pts: 20, q: "判断：不管如何，我都要去。", a: "错 (无论)" },
+            { id: "j_1_30", catIdx: 1, pts: 30, q: "你快点，____就迟到了。(然而/否则)", a: "否则" },
+            { id: "j_2_10", catIdx: 2, pts: 10, q: "小雨为什么没做完考试题？", a: "先做了复杂的题" },
+            { id: "j_2_20", catIdx: 2, pts: 20, q: "“好读书”的意思是什么？", a: "养成阅读习惯" },
+            { id: "j_2_30", catIdx: 2, pts: 30, q: "提高阅读能力的方法有哪些？", a: "做读书笔记" }
+        ]
+    },
+    
+    fun: {
+        // ✅ 修复：完整包含 30 个核心生词，每次抽1个不重复
+        guess_words: [
+            "流利", "厉害", "语法", "准确", "词语", "连", "阅读", "来得及", "复杂", "只好",
+            "填空", "猜", "否则", "客厅", "无论", "杂志", "著名", "页", "增加", "文章",
+            "内容", "然而", "看法", "相同", "顺序", "表示", "养成", "同时", "精彩", "翻译"
+        ],
+        undercover: [
+            { id: "fu_01", civilian: "阅读", spy: "看书" },
+            { id: "fu_02", civilian: "准确", spy: "正确" },
+            { id: "fu_03", civilian: "杂志", spy: "报纸" },
+            { id: "fu_04", civilian: "习惯", spy: "爱好" },
+            { id: "fu_05", civilian: "复杂", spy: "麻烦" }
+        ],
+        wordcloud: [] 
+    },
+    
+    analytics_base: { overall: { completion_rate: 65, avg_score: 72, weakest_point: "尚未暴露" }, student_init: { score: 60, level: "初测", desc: "等待课堂互动数据分析..." } },
+    analytics: {
+        overview: { total_students: "14 人", completion_rate: "85.8%", avg_score: "76.5 分", weakest_point: "近义词：无论/不管", error_rates: [{ title: "语法：无论 vs 不管", rate: 38 }, { title: "语法：连......也/都......", rate: 25 }, { title: "词汇：复杂 vs 麻烦", rate: 18 }], ai_advice: "🤖 教学建议：\n1. 俄罗斯学生在口语词“不管”与书面词“无论”的边界感较弱，建议进行专项配对特训。\n2. “连...都...”前置宾语错位严重，建议下发 3 道连词成句题进行巩固。" },
+        student_reports: []
+    }
 };

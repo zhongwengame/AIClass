@@ -3,109 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>学生端 - 课堂互动</title>
-    <!-- 使用相同的加密 MQTT 库 -->
+    <title>王老师课堂 - 学生端</title>
+    <!-- 同样强制使用 WSS (加密) -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <style>
-        body { font-family: sans-serif; background: #6f42c1; color: white; text-align: center; padding: 20px; margin: 0; }
-        .login-box { margin-top: 50px; background: white; color: #333; padding: 30px; border-radius: 12px; }
-        input { width: 80%; padding: 15px; font-size: 18px; border: 2px solid #ccc; border-radius: 8px; margin-bottom: 20px;}
-        button { background: #10b981; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold;}
-        .work-area { display: none; margin-top: 20px; background: white; color: #333; padding: 20px; border-radius: 12px; min-height: 400px;}
-        
-        /* 卧底卡牌样式 */
-        .card-secret { background: #fef08a; border: 2px dashed #eab308; padding: 30px; border-radius: 10px; margin-top: 20px;}
-        .card-secret h1 { color: #b45309; font-size: 40px; margin: 10px 0;}
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style> body { background-color: #f3f4f6; } </style>
 </head>
-<body>
+<body class="flex flex-col h-screen text-gray-800">
 
-<div id="login-box" class="login-box">
-    <h2>欢迎来到中文课堂</h2>
-    <p>请输入你的真实姓名：</p>
-    <input type="text" id="studentName" placeholder="例如：安妮 / Anna">
-    <button onclick="joinClass()">加入课堂</button>
+<!-- 登录界面 -->
+<div id="login-screen" class="flex-1 flex flex-col items-center justify-center p-6 bg-indigo-900">
+    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+        <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+            <i class="fas fa-user-graduate"></i>
+        </div>
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">进入课堂</h2>
+        <input type="text" id="studentName" placeholder="输入你的真实姓名" class="w-full border-2 border-gray-200 p-4 rounded-xl mb-6 text-lg text-center focus:border-indigo-500 focus:outline-none">
+        <button onclick="joinClass()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl text-lg shadow-lg hover:bg-indigo-700 transition">连线大屏幕</button>
+    </div>
 </div>
 
-<div id="work-area" class="work-area">
-    <h2 id="task-title" style="color:#6f42c1;">等待老师发题...</h2>
-    <div id="task-content">
-        <p style="color:#666;">请看大屏幕听讲，当老师发题时，这里会自动亮起。</p>
+<!-- 答题界面 -->
+<div id="work-screen" class="hidden flex-1 flex flex-col p-4">
+    <header class="bg-white p-4 rounded-xl shadow-sm text-center mb-4">
+        <span class="text-gray-500 text-sm font-bold">当前身份</span>
+        <h3 id="display-name" class="text-xl font-black text-indigo-700"></h3>
+    </header>
+
+    <div class="flex-1 bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center border-t-4 border-indigo-500 text-center relative overflow-hidden">
+        
+        <!-- 默认状态 -->
+        <div id="task-waiting" class="space-y-4">
+            <i class="fas fa-satellite-dish text-5xl text-gray-300 animate-pulse"></i>
+            <h2 class="text-2xl font-bold text-gray-400">请看大屏幕</h2>
+            <p class="text-gray-400">等待老师发送指令...</p>
+        </div>
+
+        <!-- 任务容器 -->
+        <div id="task-active" class="hidden w-full h-full flex flex-col justify-center">
+            <h2 id="task-title" class="text-xl font-bold text-gray-500 mb-6 border-b pb-2"></h2>
+            <div id="task-content" class="w-full"></div>
+        </div>
+
     </div>
 </div>
 
 <script>
     const ROOM_ID = "WangTeacher_HSK_Room1";
-    // 强制使用 WSS 保证在 GitHub Pages 的 HTTPS 环境下能连上！
-    const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt'); 
+    // 强制使用 WSS 协议，彻底解决手机端在外网收不到题的问题
+    const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt'); 
     let myName = "";
 
     function joinClass() {
         myName = document.getElementById('studentName').value.trim();
-        if (!myName) { alert("名字不能为空哦！"); return; }
+        if (!myName) return alert("姓名不能为空！");
         
-        document.getElementById('login-box').style.display = 'none';
-        document.getElementById('work-area').style.display = 'block';
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('work-screen').classList.remove('hidden');
+        document.getElementById('work-screen').classList.add('flex');
+        document.getElementById('display-name').innerText = myName;
 
-        // 告诉大屏：我进来了！
-        client.publish(`${ROOM_ID}/student_join`, JSON.stringify({ name: myName }));
+        // 发送上线通知
+        mqttClient.publish(`${ROOM_ID}/student_join`, JSON.stringify({ name: myName }));
         
         // 监听指令
-        client.subscribe(`${ROOM_ID}/action`);
-        // 监听属于自己的卧底卡牌
-        client.subscribe(`${ROOM_ID}/undercover`);
+        mqttClient.subscribe(`${ROOM_ID}/action`);
+        mqttClient.subscribe(`${ROOM_ID}/undercover`);
     }
 
-    client.on('message', (topic, message) => {
+    mqttClient.on('message', (topic, message) => {
         const msg = JSON.parse(message.toString());
 
-        // 1. 处理点对点的【谁是卧底】卡牌
-        if (topic === `${ROOM_ID}/undercover`) {
-            // 只有发给我的，我才看得到！
-            if (msg.target === myName) {
-                document.getElementById('task-title').innerText = "🤫 你的专属身份牌";
-                document.getElementById('task-content').innerHTML = `
-                    <div class="card-secret">
-                        <p>你的词语是：</p>
-                        <h1>${msg.word}</h1>
-                        <p style="color:#666; font-size:14px;">不要给别人看哦！轮到你时，请描述这个词。</p>
-                    </div>
-                `;
-            }
+        if (topic === `${ROOM_ID}/undercover` && msg.target === myName) {
+            showTask("🎭 你的专属身份牌", `
+                <div class="bg-yellow-100 border-4 border-yellow-400 p-8 rounded-2xl">
+                    <p class="text-gray-600 mb-2">你的词语是：</p>
+                    <h1 class="text-5xl font-black text-yellow-700 tracking-wider">${msg.word}</h1>
+                    <p class="text-sm text-gray-500 mt-6">嘘...不要给别人看！</p>
+                </div>
+            `);
         } 
-        // 2. 处理大屏幕的统一广播指令
         else if (topic === `${ROOM_ID}/action`) {
-            if (msg.type === "match") {
-                document.getElementById('task-title').innerText = "📝 词语搭配 (请看大屏作答)";
-                document.getElementById('task-content').innerHTML = `<p>大屏幕上出现了连线题，请大声告诉老师答案！</p>`;
-            } 
-            else if (msg.type === "quiz") {
-                document.getElementById('task-title').innerText = "❓ 单项选择题";
-                let h = `<p style="font-size:18px; font-weight:bold;">${msg.data.q}</p><div style="display:flex; flex-direction:column; gap:10px;">`;
+            if (msg.type === "quiz") {
+                let html = `<p class="text-xl font-bold mb-6 text-left leading-relaxed text-gray-800">${msg.data.q}</p><div class="flex flex-col gap-3">`;
                 msg.data.options.forEach(opt => {
-                    h += `<button style="background:#e0f2fe; color:#0284c7;">${opt}</button>`;
+                    html += `<button class="w-full bg-blue-50 text-blue-700 font-bold py-4 rounded-xl border-2 border-blue-200 active:bg-blue-200 text-lg">${opt}</button>`;
                 });
-                h += `</div>`;
-                document.getElementById('task-content').innerHTML = h;
+                html += `</div>`;
+                showTask("❓ 单项选择题", html);
             }
             else if (msg.type === "cloud") {
-                document.getElementById('task-title').innerText = "☁️ 词云互动";
-                document.getElementById('task-content').innerHTML = `
-                    <p style="font-weight:bold;">${msg.title}</p>
-                    <input type="text" id="cloudInput" placeholder="输入词语...">
-                    <button onclick="submitCloud()">发射弹幕！</button>
-                `;
+                showTask("☁️ 发送词云弹幕", `
+                    <p class="font-bold text-lg mb-6 text-indigo-700">${msg.title}</p>
+                    <input type="text" id="cloudInput" placeholder="输入词语..." class="w-full border-2 border-gray-300 p-4 rounded-xl mb-4 text-xl text-center focus:border-indigo-500">
+                    <button onclick="submitCloud()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl text-xl shadow">发射弹幕 🚀</button>
+                `);
             }
         }
     });
 
-    // 提交词云
+    function showTask(title, html) {
+        document.getElementById('task-waiting').classList.add('hidden');
+        document.getElementById('task-active').classList.remove('hidden');
+        document.getElementById('task-title').innerText = title;
+        document.getElementById('task-content').innerHTML = html;
+    }
+
     function submitCloud() {
         const word = document.getElementById('cloudInput').value.trim();
         if (!word) return;
-        client.publish(`${ROOM_ID}/cloud_word`, JSON.stringify({ name: myName, word: word }));
-        document.getElementById('cloudInput').value = ""; // 清空输入框
-        alert("弹幕已发射到大屏幕！");
+        mqttClient.publish(`${ROOM_ID}/cloud_word`, JSON.stringify({ name: myName, word: word }));
+        document.getElementById('cloudInput').value = "";
+        alert("发送成功！请看大屏幕");
+        document.getElementById('task-active').classList.add('hidden');
+        document.getElementById('task-waiting').classList.remove('hidden');
     }
 </script>
 </body>

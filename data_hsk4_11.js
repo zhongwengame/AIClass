@@ -1,10 +1,26 @@
 window.HSK_DATA = {
-    lessonInfo: { id: "hsk4_lesson_11", level: "HSK 4", title: "第 11 课：《读书好，读好书，好读书》" },
-    students: ["FATEEV ALEKSANDR", "IVANOV KONSTANTIN", "SANGADZHIEV DZHIRGAL", "BARILOVICH ELIZAVETA", "SARAYKIN ANDREY", "GORELOVA ELIZAVETA", "SHCHELOKOVA KSENIIA", "VOROBEV ANDREI", "SHUMAKHOV DAMIR", "MANOKHIN MAKSIM", "KLYUCHIKOV EGOR", "IVANOV KIRILL", "LESHCHINSKAIA OLESIA", "MANUYLOV ALEXANDER"],
-    learn: { slidesUrl: "https://docs.google.com/presentation/d/1ja_8u2MGPAB-nSnBF6VqxwxmmhEiMsyi/embed?start=false&loop=false&delayms=3000" },
+    lessonInfo: { 
+        id: "hsk4_lesson_11", 
+        level: "HSK 4", 
+        title: "第 11 课：《读书好，读好书，好读书》" 
+    },
+    
+    // 真实学生名单 (14人)
+    students: [
+        "FATEEV ALEKSANDR", "IVANOV KONSTANTIN", "SANGADZHIEV DZHIRGAL", 
+        "BARILOVICH ELIZAVETA", "SARAYKIN ANDREY", "GORELOVA ELIZAVETA", 
+        "SHCHELOKOVA KSENIIA", "VOROBEV ANDREI", "SHUMAKHOV DAMIR", 
+        "MANOKHIN MAKSIM", "KLYUCHIKOV EGOR", "IVANOV KIRILL", 
+        "LESHCHINSKAIA OLESIA", "MANUYLOV ALEXANDER"
+    ],
+    
+    // 课件链接
+    learn: { 
+        slidesUrl: "https://docs.google.com/presentation/d/1ja_8u2MGPAB-nSnBF6VqxwxmmhEiMsyi/embed?start=false&loop=false&delayms=3000" 
+    },
     
     practice: {
-        // 30个核心生词 (中/拼/俄，用于配对和消消乐)
+        // 30个核心生词 (中、拼、俄)
         vocab: [
             { id: "v_01", word: "流利", pinyin: "liúlì", ru: "бегло" },
             { id: "v_02", word: "厉害", pinyin: "lìhai", ru: "сильный" },

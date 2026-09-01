@@ -1,397 +1,142 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-<title>王老师中文课堂 - 教师主控台</title>
-
-<!-- 防白屏与网络诊断探针 -->
-<script>
-  window.addEventListener('error', function(e) {
-    document.write('<div style="position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:99999;padding:20px;">🚨 报错: ' + e.message + '<br><br>如果您看到这条信息，请按键盘 <b>F12</b> 键，点击 <b>Console (控制台)</b> 将红字拍照发我！</div>');
-  });
-</script>
-
-<!-- ================= 核心修改：全部替换为国内极速 CDN ================= -->
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdn.staticfile.net/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdn.staticfile.net/vue/3.3.4/vue.global.prod.min.js"></script>
-<script src="https://cdn.staticfile.net/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.staticfile.net/mqtt/4.3.7/mqtt.min.js"></script>
-<script src="data_hsk4_11.js"></script>
-
-<style>
-  body { background-color:#f1f5f9; font-family:"PingFang SC",sans-serif; color:#1e293b; overflow-y:hidden; margin:0; }
-  .nav-btn { color:#475569; transition:all 0.2s ease; border-radius:12px; margin-bottom:8px; display:flex; align-items:center; }
-  .nav-btn i { width:30px; text-align:center; font-size:1.2rem; }
-  .nav-btn:hover { background-color:#e2e8f0; }
-  .nav-btn.active { background-color:#ffffff; color:#4f46e5; font-weight:bold; box-shadow:0 4px 15px rgba(0,0,0,0.05); border-left:5px solid #4f46e5; }
-  .card-shadow { box-shadow:0 4px 20px rgba(0,0,0,0.03); border:1px solid #e2e8f0; }
-  .animate-fade { animation:fadeIn 0.3s ease-out; }
-  @keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
-  .match-card { height:85px; display:flex; align-items:center; justify-content:center; background:#fff; border:2px solid #cbd5e1; border-radius:12px; font-weight:bold; cursor:pointer; font-size:1.25rem; user-select:none; transition:all 0.2s; }
-  .match-card:hover:not(.matched) { border-color:#4f46e5; transform:translateY(-3px); box-shadow:0 5px 15px rgba(79,70,229,0.15); }
-  .match-card.selected { background:#eef2ff; border-color:#4f46e5; color:#4f46e5; transform:scale(1.05); }
-  .match-card.matched { background:#f0fdf4; border-color:#22c55e; color:#16a34a; opacity:0.3; pointer-events:none; }
-  .match-card.wrong { background:#fef2f2; border-color:#ef4444; color:#dc2626; animation:shake 0.4s; }
-  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
-  .hanzi-buffer { min-height:70px; border:2px dashed #94a3b8; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:12px; font-size:1.8rem; font-weight:900; color:#4f46e5; background:#f8fafc; }
-  .cloud-container { position:relative; height:100%; min-height:400px; overflow:hidden; background:linear-gradient(135deg, #0f172a, #1e293b); border-radius:16px; display:flex; align-items:center; justify-content:center; }
-  .cloud-word { position:absolute; white-space:nowrap; transition:all 0.5s ease; text-shadow:0px 4px 15px rgba(0,0,0,0.8); cursor:default; transform:translate(-50%, -50%); }
-  .radar-bg-teacher { background:radial-gradient(circle, #f1f5f9 10%, transparent 10%), radial-gradient(circle, #f1f5f9 10%, transparent 10%); background-size:30px 30px; background-position:0 0, 15px 15px; }
-  ::-webkit-scrollbar { width:6px; }
-  ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HSK 全阶段教学与测试平台 - 教师端控制台</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body class="flex flex-col h-screen">
-<div id="app" class="flex flex-col h-full w-full overflow-hidden">
-
-  <!-- 顶部栏 -->
-  <header class="bg-[#0f172a] text-white px-6 py-4 flex justify-between items-center shadow-lg shrink-0 z-50">
-    <div class="flex items-center gap-6">
-      <button @click="isLeftOpen = !isLeftOpen" class="text-amber-400 text-2xl hover:text-amber-300 transition"><i class="fa-solid fa-bars"></i></button>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+  <div id="app" class="max-w-4xl mx-auto p-6">
+    <header class="mb-8 flex justify-between items-center bg-white p-6 rounded-xl shadow-md border border-slate-200">
       <div>
-        <h1 class="text-xl font-bold tracking-wider">王老师中文课堂</h1>
-        <p class="text-[11px] text-slate-400 mt-1">{{ d ? d.lessonInfo.title : '数据加载中...' }}</p>
+        <h1 class="text-2xl font-bold text-slate-900">HSK 互动课堂 - 教师中控台</h1>
+        <p class="text-slate-500 text-sm mt-1">控制课堂进度、推送练习与实时互动</p>
       </div>
-    </div>
-    <div class="flex items-center gap-6">
-      <div class="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-full border border-slate-700">
-        <span class="w-3 h-3 rounded-full" :class="isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'"></span>
-        <span class="text-sm font-bold text-slate-200">{{ isConnected ? '系统已互联' : '网络中断' }}</span>
+      <div class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
+        系统状态：在线
       </div>
-      <button @click="isRightOpen = !isRightOpen" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg text-sm font-bold transition">
-        <i class="fa-solid mr-2" :class="isRightOpen ? 'fa-eye-slash' : 'fa-eye'"></i> 互动监控台
-      </button>
-    </div>
-  </header>
+    </header>
 
-  <!-- 主体部分 -->
-  <div class="flex flex-1 overflow-hidden">
-    
-    <!-- 左侧导航 -->
-    <aside :class="isLeftOpen ? 'w-60' : 'w-20'" class="bg-[#f8fafc] border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300 z-40">
-      <nav class="flex-1 px-4 py-6 overflow-y-auto space-y-2">
-        <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id" class="nav-btn w-full px-4 py-4 text-left" :class="{ 'active': currentTab === tab.id }">
-          <i :class="tab.icon"></i><span v-show="isLeftOpen" class="ml-3 text-base">{{ tab.name }}</span>
-        </button>
-      </nav>
-    </aside>
-
-    <!-- 核心功能呈现区 -->
-    <main class="flex-1 bg-[#f1f5f9] min-w-0 overflow-y-auto relative p-6 scroll-smooth">
-      <div v-if="!d" class="text-rose-500 font-bold text-xl text-center mt-20">
-          <i class="fa-solid fa-triangle-exclamation text-5xl mb-4"></i><br>
-          🚨 错误：未能加载 data_hsk4_11.js 数据文件！<br>请确保文件存在且保存为 UTF-8 格式。
-      </div>
-      <template v-else>
+    <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- 课程选择与控制 -->
+      <section class="md:col-span-2 bg-white p-6 rounded-xl shadow-md border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">1. 选择教学/练习内容</h2>
         
-        <!-- 【学】 -->
-        <div v-if="currentTab === 'learn'" class="flex flex-col gap-6 h-full animate-fade">
-          <div class="bg-white p-5 rounded-2xl card-shadow flex justify-between items-center shrink-0">
-            <h2 class="text-xl font-bold text-slate-700"><i class="fa-solid fa-chalkboard text-indigo-500 mr-3"></i>数字课件</h2>
-            <a :href="d.learn.slidesUrl" target="_blank" class="text-indigo-600 font-bold bg-indigo-50 px-4 py-2 rounded-full">全屏打开 <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></a>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">选择课程级别 JSON：</label>
+            <select v-model="selectedJson" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="data/hsk4-l11.json">HSK 4 - 第11课：读书好，读好书，好读书</option>
+            </select>
           </div>
-          <div class="flex-1 bg-white rounded-2xl card-shadow overflow-hidden relative">
-            <iframe :src="d.learn.slidesUrl" class="absolute top-0 left-0 w-full h-full border-0"></iframe>
+
+          <div v-if="lessonData" class="p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-900">
+            <h3 class="font-bold text-base mb-1">{{ lessonData.title }}</h3>
+            <p class="text-indigo-700">级 别：HSK {{ lessonData.level }}</p>
+            <p class="text-indigo-700">模块数：{{ lessonData.modules ? lessonData.modules.length : 0 }} 个</p>
           </div>
-        </div>
 
-        <!-- 【练】 -->
-        <div v-if="currentTab === 'practice'" class="flex flex-col gap-6 h-full animate-fade">
-          <div class="bg-white p-3 rounded-2xl card-shadow flex gap-3 overflow-x-auto shrink-0">
-             <button v-for="tab in practiceTabs" :key="tab.id" @click="changePractice(tab.id)"
-                     class="px-6 py-3 rounded-xl text-sm font-bold transition" 
-                     :class="currentPractice === tab.id ? 'bg-indigo-50 text-indigo-700 border-indigo-200 border' : 'bg-slate-50 text-slate-600 border border-transparent'">
-               {{ tab.name }}
-             </button>
-          </div>
-          
-          <div class="bg-white rounded-2xl card-shadow p-8 flex flex-col flex-1 relative">
-            <div class="flex justify-between items-center mb-8 border-b-2 border-slate-100 pb-5 shrink-0">
-              <h3 class="text-2xl font-black text-slate-800"><i class="fa-solid fa-pen-ruler text-indigo-500 mr-3"></i>{{ getPracticeName(currentPractice) }}</h3>
-              <button v-if="currentPractice === 'vocab_drill'" @click="dispatchByMQTT" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl text-base font-bold transition flex items-center shadow-lg">
-                <i class="fa-solid fa-paper-plane mr-2"></i> 推送题目至手机
-              </button>
-            </div>
-
-            <div v-if="currentPractice === 'vocab_drill'" class="space-y-4 overflow-y-auto pr-2 pb-10">
-              <div v-for="(item, i) in drillList" :key="i" @click="currentDrillIndex = i" class="p-6 rounded-2xl border-2 cursor-pointer transition" :class="currentDrillIndex === i ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-slate-200'">
-                <p class="text-lg font-bold text-slate-800 mb-5">{{ i+1 }}. {{ item.q }}</p>
-                <div class="flex flex-wrap gap-4">
-                   <button v-for="opt in item.options" :key="opt" @click.stop="item.revealed = true" 
-                           class="px-6 py-2 rounded-xl border-2 text-base font-bold transition"
-                           :class="item.revealed ? (opt === item.ans ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-slate-100 text-slate-400 border-slate-200') : 'bg-white text-indigo-600 border-indigo-300'">
-                     {{ opt }}
-                   </button>
-                </div>
-              </div>
-            </div>
-
-            <div v-else-if="currentPractice === 'colloc'" class="flex flex-col h-full">
-              <div class="flex justify-between items-center mb-6">
-                <span class="text-slate-500 font-bold bg-slate-100 px-4 py-2 rounded-lg">大屏连线（彻底打乱）</span>
-                <button @click="nextCollocPage" class="bg-indigo-100 text-indigo-700 px-6 py-3 rounded-xl font-bold">换下一批</button>
-              </div>
-              <div class="grid grid-cols-2 gap-x-24 gap-y-6 max-w-5xl mx-auto w-full">
-                <div class="space-y-6">
-                  <div v-for="l in currentCollocLeft" :key="l.uid" @click="handleCollocClick(l, 'left')" class="p-5 rounded-2xl text-center font-bold text-xl cursor-pointer border-2 transition" :class="l.matched ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-50' : (collocSelected?.uid === l.uid ? 'bg-indigo-500 text-white scale-105' : 'bg-white border-slate-300')">{{ l.text }}</div>
-                </div>
-                <div class="space-y-6">
-                  <div v-for="r in currentCollocRight" :key="r.uid" @click="handleCollocClick(r, 'right')" class="p-5 rounded-2xl text-center font-bold text-xl cursor-pointer border-2 transition" :class="r.matched ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-50' : (collocSelected?.uid === r.uid ? 'bg-amber-500 text-white scale-105' : 'bg-white border-slate-300')">{{ r.text }}</div>
-                </div>
-              </div>
-            </div>
-
-            <div v-else-if="['pinyin_match', 'lang_match'].includes(currentPractice)" class="flex flex-col gap-6">
-              <div class="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <span class="font-bold text-slate-600">点击对应的卡片进行消消乐配对</span>
-                <button @click="nextGamePage" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold">换一批</button>
-              </div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-4">
-                <div v-for="card in currentCards" :key="card.uid" @click="handleCardClick(card)" class="match-card" :class="{'selected': selectedCard?.uid === card.uid, 'matched': card.matched, 'wrong': card.wrong}">
-                  {{ card.text }}
-                </div>
-              </div>
-            </div>
-
-            <div v-else-if="currentPractice === 'hanzi_match'" class="flex flex-col gap-6">
-              <div class="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <span class="font-bold text-slate-600">按正确顺序点击单字，拼出词汇</span>
-                <button @click="nextGamePage" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold">换下一批</button>
-              </div>
-              <div class="hanzi-buffer shadow-inner" :class="{'bg-rose-50 border-rose-400 text-rose-600': hanziWrong}">
-                <span v-if="hanziBuffer.length === 0" class="text-slate-300 font-normal">点击下方单字...</span>
-                <span v-for="c in hanziBuffer" :key="c.uid" class="px-2 animate-fade">{{ c.text }}</span>
-              </div>
-              <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-5">
-                <div v-for="card in currentCards" :key="card.uid" @click="handleHanziClick(card)" class="match-card text-3xl font-black bg-gradient-to-br from-white to-slate-50" :class="{'matched': card.matched, 'opacity-40 pointer-events-none scale-90': hanziBuffer.includes(card)}">
-                  {{ card.text }}
-                </div>
-              </div>
-            </div>
-
-            <div v-else-if="currentPractice === 'read_aloud'" class="space-y-4 overflow-y-auto pb-10">
-              <div v-for="(r, i) in d.practice.reading_aloud" :key="i" class="bg-white p-6 rounded-2xl border-2 border-slate-100 text-xl font-bold flex justify-between items-center">
-                <span><span class="text-indigo-500 mr-2">{{ i+1 }}.</span> {{ r.text }}</span>
-              </div>
-            </div>
+          <div class="pt-4 flex gap-4">
+            <button @click="launchStudentView" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow transition">
+              🚀 投屏/启动学生端页面
+            </button>
           </div>
         </div>
+      </section>
 
-        <!-- 【测】 -->
-        <div v-if="currentTab === 'test'" class="flex items-center justify-center h-full animate-fade">
-          <div class="bg-white p-16 rounded-[2rem] card-shadow text-center max-w-3xl w-full border-t-[12px] border-emerald-500 shadow-2xl relative">
-            <h2 class="text-4xl font-black text-slate-800 mb-6">HSK 全真模拟测试大厅</h2>
-            <button @click="openTest" class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-12 py-5 rounded-full font-bold text-2xl shadow-xl hover:scale-105 transition">启动测试 (新窗口)</button>
-          </div>
+      <!-- 课堂二维码 -->
+      <section class="bg-white p-6 rounded-xl shadow-md border border-slate-200 flex flex-col items-center justify-center text-center">
+        <h2 class="text-lg font-bold text-slate-800 mb-2">2. 学生扫码加入</h2>
+        <p class="text-xs text-slate-500 mb-4">扫码快速进入当前选中的课程</p>
+        
+        <div id="qrcode-container" class="p-3 bg-white border border-slate-200 rounded-lg shadow-inner min-h-[160px] flex items-center justify-center">
+          <div id="qrcode"></div>
         </div>
-
-        <!-- 【赛】 -->
-        <div v-if="currentTab === 'race'" class="h-full flex flex-col animate-fade">
-            <div class="flex justify-between items-center mb-6 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                <h2 class="text-2xl font-black text-slate-800">诸神之战 (Jeopardy)</h2>
-                <button @click="resetRace" class="bg-slate-100 border border-slate-300 px-6 py-3 rounded-xl font-bold">重置九宫格</button>
-            </div>
-            <div v-if="!activeRaceQ" class="grid grid-cols-3 gap-8 flex-1 max-w-6xl w-full mx-auto">
-                <div v-for="(cat, cIdx) in d.race.categories" :key="cIdx" class="flex flex-col gap-5">
-                    <div class="bg-indigo-700 text-white text-center py-5 rounded-2xl font-black text-2xl shadow-lg">{{ cat }}</div>
-                    <div v-for="pts in [10, 20, 30]" :key="pts" @click="openRaceQ(cIdx, pts)" class="flex-1 bg-white border-4 border-indigo-100 rounded-2xl flex items-center justify-center text-6xl font-black cursor-pointer shadow-md hover:bg-indigo-50" :class="isRaceAnswered(cIdx, pts) ? 'opacity-50 pointer-events-none' : 'text-indigo-600'">{{ pts }}</div>
-                </div>
-            </div>
-            <div v-else class="flex-1 bg-white rounded-[2rem] shadow-2xl border-[6px] border-indigo-500 p-12 flex flex-col items-center justify-center text-center relative max-w-5xl w-full mx-auto animate-fade">
-                <h1 class="text-5xl font-black text-slate-800 mb-16 leading-relaxed max-w-4xl">{{ activeRaceQ.q }}</h1>
-                <div v-if="raceRevealed" class="text-5xl font-bold text-emerald-600 bg-emerald-50 border-4 border-emerald-300 px-16 py-10 rounded-3xl mb-12"><span class="text-2xl text-emerald-500 block mb-2">正确答案</span>{{ activeRaceQ.a }}</div>
-                <div class="flex gap-8 mt-auto">
-                    <button v-if="!raceRevealed" @click="sendRaceToStudents" class="bg-indigo-600 text-white px-12 py-6 rounded-full text-3xl font-black shadow-xl hover:scale-105 transition">开启手机抢答</button>
-                    <button v-if="!raceRevealed" @click="raceRevealed = true" class="bg-amber-500 text-white px-10 py-6 rounded-full text-2xl font-bold shadow-xl">揭晓答案</button>
-                    <button v-else @click="closeRaceQ" class="bg-slate-800 text-white px-12 py-6 rounded-full text-2xl font-bold">结束本题，返回题板</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 【趣】 -->
-        <div v-if="currentTab === 'fun'" class="flex flex-col gap-6 h-full animate-fade">
-          <div class="grid grid-cols-3 gap-6 shrink-0">
-            <div @click="activeFunGame = 'guess'; startGuessGame()" class="bg-gradient-to-br from-[#f97316] to-[#f59e0b] rounded-2xl p-6 text-white cursor-pointer shadow-lg hover:-translate-y-2 transition text-center"><h3 class="text-2xl font-black mb-2">我说你猜</h3></div>
-            <div @click="activeFunGame = 'undercover'" class="bg-gradient-to-br from-[#8b5cf6] to-[#a855f7] rounded-2xl p-6 text-white cursor-pointer shadow-lg hover:-translate-y-2 transition text-center"><h3 class="text-2xl font-black mb-2">谁是卧底</h3></div>
-            <div @click="activeFunGame = 'cloud'; startCloud()" class="bg-gradient-to-br from-[#10b981] to-[#22c55e] rounded-2xl p-6 text-white cursor-pointer shadow-lg hover:-translate-y-2 transition text-center"><h3 class="text-2xl font-black mb-2">动态词云</h3></div>
-          </div>
-          
-          <div class="bg-white rounded-3xl card-shadow flex-1 p-8 relative flex flex-col">
-            <div v-if="!activeFunGame" class="m-auto text-slate-300 font-black text-3xl">请选择上方游戏</div>
-            <div v-if="activeFunGame === 'guess'" class="h-full bg-orange-50 flex flex-col items-center justify-center p-10 rounded-2xl border-4 border-orange-200">
-              <div class="flex justify-between w-full max-w-3xl mb-10">
-                <div class="bg-slate-800 text-white px-8 py-3 rounded-full font-bold text-2xl">剩余词数：<span class="text-amber-400">{{ remainingGuessWords.length }}</span></div>
-              </div>
-              <div class="bg-white w-full max-w-3xl rounded-[3rem] py-24 text-center shadow-2xl mb-12"><h1 class="text-[6rem] font-black text-slate-800">{{ currentGuessWord || '准备' }}</h1></div>
-              <div class="flex gap-6"><button @click="nextGuess(true)" class="bg-emerald-500 text-white px-16 py-6 rounded-2xl font-black text-3xl">猜对了！</button></div>
-            </div>
-
-            <div v-if="activeFunGame === 'undercover'" class="h-full flex items-center justify-center">
-              <div class="bg-purple-50 border-4 border-purple-200 p-12 rounded-[2rem] text-center max-w-3xl w-full">
-                 <h2 class="text-3xl font-black text-purple-800 mb-4">卧底发牌台 (右侧选4人)</h2>
-                 <div class="flex justify-center gap-6 mb-10"><div v-for="i in 4" :key="i" class="w-40 h-40 rounded-2xl flex items-center justify-center text-2xl font-black border-4" :class="ucPlayers[i-1] ? 'bg-green-100 border-green-500 text-green-700 scale-110' : 'bg-white text-gray-400'">{{ ucPlayers[i-1] || '等待选择' }}</div></div>
-                 <button @click="sendUndercoverRoles" :disabled="ucPlayers.length !== 4" :class="ucPlayers.length === 4 ? 'bg-orange-500' : 'bg-gray-300 opacity-70'" class="text-white px-16 py-6 rounded-full text-3xl font-black mx-auto">一键暗中发牌</button>
-                 <div v-if="ucResult" class="mt-8 text-xl text-rose-600 font-bold bg-rose-50 p-6 rounded-2xl text-left" v-html="ucResult"></div>
-              </div>
-            </div>
-
-            <div v-if="activeFunGame === 'cloud'" class="w-full h-full flex flex-col relative">
-              <button @click="dispatchCloudTask" class="bg-indigo-600 text-white px-10 py-4 rounded-full font-bold text-xl absolute top-4 left-1/2 transform -translate-x-1/2 z-10">推送任务：请学生发送弹幕</button>
-              <div class="cloud-container w-full flex-1 mt-10 border-4 border-slate-800 shadow-2xl">
-                <transition-group name="cloud-pop">
-                  <div v-for="word in wordCloudList" :key="word.text" class="cloud-word font-black tracking-wider" :style="{ fontSize: word.size + 'px', color: word.color, left: word.x + '%', top: word.y + '%' }">{{ word.text }} <span class="text-sm bg-rose-500 text-white px-2 py-1 rounded-full">{{ word.count }}</span></div>
-                </transition-group>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 【评】 -->
-        <div v-if="currentTab === 'evaluate'" class="flex flex-col gap-6 h-full animate-fade">
-            <h2 class="text-3xl font-black text-slate-800 mb-2">班级学情数据大屏</h2>
-            <div class="grid grid-cols-3 gap-6">
-                <div class="bg-indigo-600 p-8 rounded-3xl text-white shadow-xl"><p class="font-bold">出勤与互动人数</p><h3 class="text-5xl font-black">{{ onlineStudents.size }}<span class="text-xl"> / 14</span></h3></div>
-                <div class="bg-emerald-500 p-8 rounded-3xl text-white shadow-xl"><p class="font-bold">全班平均正确率</p><h3 class="text-5xl font-black">78<span class="text-xl"> %</span></h3></div>
-                <div class="bg-orange-500 p-8 rounded-3xl text-white shadow-xl"><p class="font-bold">最高互动积分</p><h3 class="text-5xl font-black">125<span class="text-xl"> 分</span></h3></div>
-            </div>
-            <div class="flex gap-6 mt-4 flex-1">
-                <div class="bg-white flex-1 rounded-3xl card-shadow p-8"><h3 class="text-xl font-black mb-6">能力雷达分析</h3><div class="radar-bg-teacher h-64 border-4 rounded-xl flex items-center justify-center font-bold text-indigo-500">雷达图数据收集中...</div></div>
-                <div class="bg-white w-1/3 rounded-3xl card-shadow p-8"><h3 class="text-xl font-black text-rose-600 mb-6">课堂薄弱项警报</h3><div class="bg-rose-50 p-4 rounded-xl border border-rose-100 mb-4"><h4 class="font-bold text-rose-800">无论 vs 不管 (错误率45%)</h4></div><div class="bg-indigo-50 p-5 rounded-xl border border-indigo-100"><h4 class="font-black text-indigo-800">AI 建议</h4><p class="text-sm font-bold">下节课单独发送2道单选题进行巩固。</p></div></div>
-            </div>
-        </div>
-      </template>
+      </section>
     </main>
-
-    <!-- <!-- 承接分割线 --> -->    <!-- 右侧互动监控栏 -->
-    <aside v-show="isRightOpen" class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 z-30 shadow-2xl">
-      <div class="p-6 border-b border-slate-100 flex flex-col items-center bg-slate-50">
-        <div id="qrcode-container" class="bg-white p-3 rounded-xl shadow-md border border-slate-200"></div>
-        <p class="text-sm text-indigo-600 mt-4 font-black">扫码进入手机端</p>
-      </div>
-      <div class="p-4 border-b border-slate-100 bg-white">
-        <h3 class="font-black text-slate-800 text-sm mb-3">🟢 在线名单 ({{ onlineStudents.size }})</h3>
-        <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-           <span v-if="onlineStudents.size === 0" class="text-xs text-slate-400 font-bold w-full py-2">暂无学生加入</span>
-           <span v-for="name in Array.from(onlineStudents)" :key="name" @click="toggleUcPlayer(name)" class="px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer border-2 transition-all" :class="ucPlayers.includes(name) ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-600'">{{ name }}</span>
-        </div>
-      </div>
-      <div class="p-4 border-b border-slate-100 bg-slate-50 shadow-inner flex justify-between items-center"><h3 class="font-black text-slate-800 text-sm">互动回音壁</h3></div>
-      <div class="flex-1 p-4 overflow-y-auto bg-[#f8fafc] flex flex-col gap-3" id="echoWall">
-        <div v-for="(msg, idx) in messages" :key="idx" class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 animate-fade">
-          <div class="flex justify-between items-center mb-2"><span class="font-bold text-indigo-700 text-sm">{{ msg.name }}</span><span class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{{ msg.time }}</span></div>
-          <p class="text-slate-800 text-sm font-medium">{{ msg.content }}</p>
-        </div>
-      </div>
-    </aside>
   </div>
-</div>
 
-<script>
-const { createApp } = Vue;
-const MQ_URL = 'wss://broker.emqx.io:8084/mqtt';
-const ROOM_ID = 'Wang_HSK_888_VIP'; 
+  <script>
+    const { createApp, ref, onMounted, watch } = Vue;
 
-createApp({
-  data() {
-    return {
-      d: window.HSK_DATA || null, client: null, isConnected: false, isLeftOpen: true, isRightOpen: true, currentTab: 'practice', 
-      tabs: [{id:'learn',name:'1. 学'},{id:'practice',name:'2. 练'},{id:'test',name:'3. 测'},{id:'race',name:'4. 赛'},{id:'fun',name:'5. 趣'},{id:'evaluate',name:'6. 评'}],
-      practiceTabs: [{id:'vocab_drill',name:'单项选择题'},{id:'colloc',name:'词语搭配'},{id:'pinyin_match',name:'拼音配对'},{id:'lang_match',name:'中俄配对'},{id:'hanzi_match',name:'汉字拼写'},{id:'read_aloud',name:'HSKK 跟读'}],
-      currentPractice: 'vocab_drill', currentDrillIndex: 0,
-      allMatchWords: [], currentCards: [], gamePage: 0, selectedCard: null, hanziBuffer: [], hanziWrong: false,
-      collocLeft: [], collocRight: [], collocSelected: null, collocPage: 0, currentCollocLeft: [], currentCollocRight: [], drillList: [],
-      activeRaceQ: null, raceRevealed: false, answeredRaceQs: [],
-      activeFunGame: null, allGuessWords: [], remainingGuessWords: [], currentGuessWord: null, guessCorrect: 0, guessWrong: 0,
-      ucPlayers: [], ucResult: '', wordCloudList: [], onlineStudents: new Set(), messages: []
-    }
-  },
-  mounted() { 
-    if(this.d) { 
-      this.initMQTT(); this.changePractice('vocab_drill'); 
-      setTimeout(() => { new QRCode(document.getElementById("qrcode-container"), { text: window.location.href.replace('teacher.html', 'student.html'), width: 120, height: 120 }); }, 500);
-      this.allGuessWords = [...this.d.fun.guess_words]; this.remainingGuessWords = [...this.allGuessWords];
-    }
-  },
-  methods: {
-    getTime() { return new Date().toLocaleTimeString('zh-CN', {hour12:false}); },
-    addMsg(name, content) { this.messages.push({ name, time: this.getTime(), content }); this.$nextTick(() => { const w = document.getElementById('echoWall'); if(w) w.scrollTop = w.scrollHeight; }); },
-    initMQTT() {
-      this.client = mqtt.connect(MQ_URL, { clientId: 'T_' + Math.random().toString(16).substr(2) });
-      this.client.on('connect', () => { this.isConnected = true; this.client.subscribe(`wanghsk/room/${ROOM_ID}/answers`); this.client.subscribe(`wanghsk/room/${ROOM_ID}/presence`); });
-      this.client.on('message', (topic, msg) => {
-        try {
-          const d = JSON.parse(msg.toString());
-          if (topic.includes('presence') && d.name) { this.onlineStudents.add(d.name); this.onlineStudents = new Set(this.onlineStudents); }
-          if (topic.includes('answers') && d.name) {
-            this.onlineStudents.add(d.name); this.onlineStudents = new Set(this.onlineStudents); this.addMsg(d.name, d.text);
-            if(this.activeFunGame === 'cloud' && d.text) {
-              const raw = d.text.trim().substring(0, 10); const ex = this.wordCloudList.find(w => w.text === raw);
-              if(ex) { ex.count++; ex.size = Math.min(100, ex.size + 15); }
-              else { this.wordCloudList.push({ text: raw, count: 1, size: 30, color: ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6'][Math.floor(Math.random()*5)], x: 10 + Math.random() * 80, y: 10 + Math.random() * 80 }); }
+    createApp({
+      setup() {
+        const selectedJson = ref('data/hsk4-l11.json');
+        const lessonData = ref(null);
+        let qrcodeObj = null;
+
+        // 获取选中的 JSON 内容预览
+        const fetchLessonPreview = async (jsonUrl) => {
+          try {
+            const res = await fetch(jsonUrl);
+            if (res.ok) {
+              lessonData.value = await res.json();
             }
+          } catch (e) {
+            console.warn('预览数据读取失败或在本地 file:// 环境下运行:', e);
           }
-        } catch(e) {}
-      });
-    },
-    dispatchByMQTT() { let q = this.drillList[this.currentDrillIndex]; this.client.publish(`wanghsk/room/${ROOM_ID}/question`, JSON.stringify({ phase: 'start', type: 'v5', sentence: q.q, options: q.options })); alert("已发送！"); },
-    dispatchCloudTask() { this.client.publish(`wanghsk/room/${ROOM_ID}/question`, JSON.stringify({ phase: 'start', type: 'text', question: '☁️ 弹幕词云：' })); alert("已发送！"); },
-    sendRaceToStudents() { this.client.publish(`wanghsk/room/${ROOM_ID}/question`, JSON.stringify({ phase: 'start', type: 'text', question: `⚡ 抢答：${this.activeRaceQ.q}` })); alert("已发送！"); },
-    openTest() { window.open('test-index.html', '_blank'); },
-    changePractice(id) {
-      this.currentPractice = id;
-      if (['pinyin_match', 'lang_match'].includes(id)) { this.allMatchWords = this.d.practice.vocab; this.gamePage = 0; this.loadGamePage(); }
-      else if (id === 'hanzi_match') { this.allMatchWords = this.d.practice.vocab.filter(v => v.word.length >= 2); this.gamePage = 0; this.loadGamePage(); }
-      else if (id === 'colloc') { this.collocLeft = this.d.practice.collocations.map((c, i) => ({uid:'l'+i, text:c.left, pairId:i, matched:false})).sort(()=>Math.random()-0.5); this.collocRight = this.d.practice.collocations.map((c, i) => ({uid:'r'+i, text:c.right, pairId:i, matched:false})).sort(()=>Math.random()-0.5); this.collocPage = 0; this.loadCollocPage(); }
-      else if (id === 'vocab_drill') { this.drillList = JSON.parse(JSON.stringify(this.d.practice.vocab_drill)).map(v => ({...v, revealed: false})); this.currentDrillIndex = 0; }
-    },
-    loadGamePage() {
-      const wordsPerPage = this.currentPractice === 'hanzi_match' ? 6 : 8; const start = this.gamePage * wordsPerPage; const pageWords = this.allMatchWords.slice(start, start + wordsPerPage); let cards = [];
-      if (this.currentPractice === 'hanzi_match') { pageWords.forEach((v, i) => { v.word.split('').forEach((char, cIdx) => { cards.push({ uid: 'hz_'+start+'_'+i+'_'+cIdx, text: char, matched: false }); }); }); }
-      else if (this.currentPractice === 'lang_match') { pageWords.forEach((v, i) => { cards.push({ uid: 'c_z_'+start+'_'+i, text: v.word, pairId: start+i, type: 'a', matched: false, wrong: false }); cards.push({ uid: 'c_r_'+start+'_'+i, text: v.ru || v.en, pairId: start+i, type: 'b', matched: false, wrong: false }); }); }
-      else { pageWords.forEach((v, i) => { cards.push({ uid: 'c_z_'+start+'_'+i, text: v.word, pairId: start+i, type: 'a', matched: false, wrong: false }); cards.push({ uid: 'c_t_'+start+'_'+i, text: v.pinyin, pairId: start+i, type: 'b', matched: false, wrong: false }); }); }
-      this.currentCards = cards.sort(() => Math.random() - 0.5); this.hanziBuffer = []; this.selectedCard = null;
-    },
-    nextGamePage() { const max = Math.ceil(this.allMatchWords.length / (this.currentPractice === 'hanzi_match' ? 6 : 8)) - 1; this.gamePage = this.gamePage >= max ? 0 : this.gamePage + 1; this.loadGamePage(); },
-    handleHanziClick(card) {
-      if(card.matched || this.hanziBuffer.includes(card)) return;
-      this.hanziBuffer.push(card); let currentStr = this.hanziBuffer.map(c => c.text).join(''); let matchedVocab = this.d.practice.vocab.find(v => v.word === currentStr);
-      if(matchedVocab) { this.hanziBuffer.forEach(c => c.matched = true); this.hanziBuffer = []; } else { let isPrefix = this.d.practice.vocab.some(v => v.word.startsWith(currentStr)); if(!isPrefix) { this.hanziWrong = true; setTimeout(() => { this.hanziWrong = false; this.hanziBuffer = []; }, 500); } }
-    },
-    handleCardClick(card) {
-      if(card.matched) return;
-      if(!this.selectedCard) { this.selectedCard = card; } else if (this.selectedCard.uid === card.uid) { this.selectedCard = null; } else {
-        if(this.selectedCard.pairId === card.pairId && this.selectedCard.type !== card.type) { card.matched = true; this.selectedCard.matched = true; this.selectedCard = null; } else { card.wrong = true; this.selectedCard.wrong = true; const prev = this.selectedCard; setTimeout(() => { card.wrong = false; prev.wrong = false; }, 400); this.selectedCard = null; }
+        };
+
+        // 补全报错中缺失的 helper 函数
+        const getPracticeName = (type) => {
+          const map = {
+            'hanzi': '汉字跟写',
+            'match': '词语连线',
+            'pk': '诸神之战 PK',
+            'listening': '听力练习',
+            'reading': '阅读理解'
+          };
+          return map[type] || '综合练习';
+        };
+
+        // 生成二维码
+        const updateQRCode = () => {
+          const studentUrl = `${window.location.origin}${window.location.pathname.replace('teacher.html', 'index.html')}?lesson=${encodeURIComponent(selectedJson.value)}`;
+          const qrElement = document.getElementById('qrcode');
+          
+          if (qrElement) {
+            qrElement.innerHTML = '';
+            qrcodeObj = new QRCode(qrElement, {
+              text: studentUrl,
+              width: 140,
+              height: 140
+            });
+          }
+        };
+
+        // 跳转学生端
+        const launchStudentView = () => {
+          const studentUrl = `index.html?lesson=${encodeURIComponent(selectedJson.value)}`;
+          window.open(studentUrl, '_blank');
+        };
+
+        watch(selectedJson, (newVal) => {
+          fetchLessonPreview(newVal);
+          updateQRCode();
+        });
+
+        onMounted(() => {
+          fetchLessonPreview(selectedJson.value);
+          // 确保 DOM 挂载完成后再渲染二维码
+          setTimeout(() => {
+            updateQRCode();
+          }, 100);
+        });
+
+        return {
+          selectedJson,
+          lessonData,
+          getPracticeName,
+          launchStudentView
+        };
       }
-    },
-    loadCollocPage() { const start = this.collocPage * 5; this.currentCollocLeft = this.collocLeft.slice(start, start + 5); this.currentCollocRight = this.collocRight.slice(start, start + 5).sort(() => Math.random() - 0.5); this.collocSelected = null; },
-    nextCollocPage() { const max = Math.ceil(this.collocLeft.length / 5) - 1; this.collocPage = this.collocPage >= max ? 0 : this.collocPage + 1; this.loadCollocPage(); },
-    handleCollocClick(item, side) {
-      if(item.matched) return;
-      if(!this.collocSelected) { this.collocSelected = { ...item, side }; } else if (this.collocSelected.uid === item.uid) { this.collocSelected = null; } else {
-        if (this.collocSelected.pairId === item.pairId && this.collocSelected.side !== side) { item.matched = true; if(side==='left') this.currentCollocRight.find(x=>x.uid===this.collocSelected.uid).matched = true; else this.currentCollocLeft.find(x=>x.uid===this.collocSelected.uid).matched = true; this.collocSelected = null; } else { this.collocSelected = null; }
-      }
-    },
-    openRaceQ(catIdx, pts) { this.activeRaceQ = this.d.race.questions.find(x => x.catIdx === catIdx && x.pts === pts); this.raceRevealed = false; },
-    closeRaceQ() { if(this.activeRaceQ && this.raceRevealed) this.answeredRaceQs.push(this.activeRaceQ.id); this.activeRaceQ = null; },
-    isRaceAnswered(catIdx, pts) { const q = this.d.race.questions.find(x => x.catIdx === catIdx && x.pts === pts); return q ? this.answeredRaceQs.includes(q.id) : true; },
-    resetRace() { this.answeredRaceQs = []; this.activeRaceQ = null; },
-    startGuessGame() { this.guessCorrect = 0; this.guessWrong = 0; this.nextGuess(false); },
-    nextGuess(isC) { if(isC) this.guessCorrect++; if (this.remainingGuessWords.length === 0) { this.currentGuessWord = "词库已空！"; return; } this.currentGuessWord = this.remainingGuessWords.splice(Math.floor(Math.random() * this.remainingGuessWords.length), 1)[0]; },
-    resetGuessGame() { this.remainingGuessWords = [...this.allGuessWords]; this.guessCorrect = 0; this.currentGuessWord = '准备'; },
-    toggleUcPlayer(name) { if(this.activeFunGame !== 'undercover') return; if(this.ucPlayers.includes(name)) { this.ucPlayers = this.ucPlayers.filter(n => n !== name); } else { if(this.ucPlayers.length < 4) this.ucPlayers.push(name); } },
-    sendUndercoverRoles() {
-      if(this.ucPlayers.length !== 4) return;
-      const pair = this.d.fun.undercover[Math.floor(Math.random()*this.d.fun.undercover.length)];
-      let arr = [...this.ucPlayers].sort(()=>0.5-Math.random()); let spy = arr[0]; let civilians = arr.slice(1);
-      this.client.publish(`wanghsk/room/${ROOM_ID}/undercover`, JSON.stringify({ target: spy, role: "卧底", word: pair.spy }));
-      civilians.forEach(p => { this.client.publish(`wanghsk/room/${ROOM_ID}/undercover`, JSON.stringify({ target: p, role: "平民", word: pair.civilian })); });
-      this.ucResult = `发牌成功！卧底: <b>${spy}</b> [${pair.spy}] | 平民: <b>${civilians.join(", ")}</b> [${pair.civilian}]`;
-    },
-    startCloud() { this.wordCloudList = []; }
-  }
-}).mount('#app')
-</script>
+    }).mount('#app');
+  </script>
 </body>
 </html>

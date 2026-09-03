@@ -10,7 +10,7 @@
   .level-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
   .level-card:hover { transform: translateY(-4px); }
   .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
-  .accordion-content.active { max-height: 1000px; transition: max-height 0.5s ease-in; }
+  .accordion-content.active { max-height: 2500px; transition: max-height 0.5s ease-in; }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
@@ -74,7 +74,7 @@
         </button>
       </div>
 
-      <!-- HSK 4 (当前精讲课程) -->
+      <!-- HSK 4 (当前精讲课程 1-20课) -->
       <div class="bg-white rounded-xl shadow border-2 border-indigo-200 overflow-hidden level-card">
         <button onclick="toggleAccordion('hsk4')" class="w-full px-6 py-4 flex justify-between items-center bg-indigo-50/50 hover:bg-indigo-50 transition-colors">
           <div class="flex items-center space-x-4">
@@ -84,26 +84,15 @@
                 <h4 class="font-bold text-indigo-950">HSK 4 级 (中级)</h4>
                 <span class="bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">重点精讲</span>
               </div>
-              <p class="text-xs text-indigo-600">掌握 2000 词汇 · 讨论较复杂的话题</p>
+              <p class="text-xs text-indigo-600">掌握 2000 词汇 · 讨论较复杂的话题 (第1 - 20课)</p>
             </div>
           </div>
           <i id="icon-hsk4" class="fa-solid fa-chevron-down text-indigo-600 transition-transform"></i>
         </button>
         
         <div id="hsk4" class="accordion-content bg-slate-50 border-t border-indigo-100 px-6 py-4 space-y-3">
-          <!-- 第 11 课 (已连接到单课学练平台) -->
-          <div class="bg-white p-5 rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition-all">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h5 class="font-bold text-slate-800 text-lg">第 11 课：《读书好，读好书，好读书》</h5>
-                <p class="text-sm text-slate-500 mt-1">包含：核心生词、语法精讲、双语/三语匹配、全真测试与诸神之战。</p>
-              </div>
-              <div class="flex space-x-3 w-full md:w-auto mt-2 md:mt-0">
-                <a href="https://zhongwengame.github.io/game/" target="_blank" class="flex-1 md:flex-none flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-bold transition shadow-sm">
-                  <i class="fa-solid fa-chalkboard-user mr-2"></i> 开始上课 (教师端)
-                </a>
-              </div>
-            </div>
+          <div id="lesson-list-container" class="space-y-3">
+            <!-- 脚本会自动生成 1 - 20 课卡片 -->
           </div>
         </div>
       </div>
@@ -121,6 +110,48 @@
   </main>
 
   <script>
+    const lessonsData = [
+      { id: 'hsk4-01', title: '第 1 课：《简单的幸福》' },
+      { id: 'hsk4-02', title: '第 2 课：《真正的朋友》' },
+      { id: 'hsk4-03', title: '第 3 课：《经理对我印象不错》' },
+      { id: 'hsk4-04', title: '第 4 课：《不要太着急赚钱》' },
+      { id: 'hsk4-05', title: '第 5 课：《只买对的，不买贵的》' },
+      { id: 'hsk4-06', title: '第 6 课：《一分钱一分货》' },
+      { id: 'hsk4-07', title: '第 7 课：《最好的医生是自己》' },
+      { id: 'hsk4-08', title: '第 8 课：《生活中不缺少美》' },
+      { id: 'hsk4-09', title: '第 9 课：《阳光总在风雨后》' },
+      { id: 'hsk4-10', title: '第 10 课：《幸福的标准》' },
+      { id: 'hsk4-11', title: '第 11 课：《读书好，读好书，好读书》' },
+      { id: 'hsk4-12', title: '第 12 课：《用心发现世界》' },
+      { id: 'hsk4-13', title: '第 13 课：《喝着茶看京剧》' },
+      { id: 'hsk4-14', title: '第 14 课：《保护地球母亲》' },
+      { id: 'hsk4-15', title: '第 15 课：《教育的孩子艺术》' },
+      { id: 'hsk4-16', title: '第 16 课：《礼轻情意重》' },
+      { id: 'hsk4-17', title: '第 17 课：《人与自然》' },
+      { id: 'hsk4-18', title: '第 18 课：《科技与生活》' },
+      { id: 'hsk4-19', title: '第 19 课：《生活的味道》' },
+      { id: 'hsk4-20', title: '第 20 课：《路上的风景》' }
+    ];
+
+    function renderLessons() {
+      const container = document.getElementById('lesson-list-container');
+      container.innerHTML = lessonsData.map(item => `
+        <div class="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition-all">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h5 class="font-bold text-slate-800 text-base">${item.title}</h5>
+              <p class="text-xs text-slate-500 mt-1">包含：课上PPT教学、核心词汇、语法精讲、阅读测试与诸神之战。</p>
+            </div>
+            <div class="flex space-x-3 w-full md:w-auto mt-2 md:mt-0">
+              <a href="https://zhongwengame.github.io/game/?lesson=${item.id}" target="_blank" class="flex-1 md:flex-none flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold transition shadow-sm text-sm">
+                <i class="fa-solid fa-chalkboard-user mr-1.5"></i> 开始上课
+              </a>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
     function toggleAccordion(id) {
       const el = document.getElementById(id);
       const icon = document.getElementById('icon-' + id);
@@ -129,7 +160,11 @@
       document.querySelectorAll('[id^="icon-"]').forEach(item => item.classList.remove('rotate-180'));
       if (!isActive) { el.classList.add('active'); icon.classList.add('rotate-180'); }
     }
-    window.addEventListener('DOMContentLoaded', () => toggleAccordion('hsk4'));
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderLessons();
+      toggleAccordion('hsk4');
+    });
   </script>
 </body>
 </html>
